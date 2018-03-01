@@ -1,0 +1,20 @@
+{
+	"name": "ares-bin",
+	"authors": [
+		"yuri"
+	],
+	"description": "Automated Business Process Restructurer",
+	"copyright": "Copyright © 2017, yuri",
+	"license": "proprietary",
+  "dependencies": {
+    "msgpack-d": ">=1.0.0-beta",
+		"vibe-d": "*",
+		"vibe-d:tls": "*",
+    "diet-ng": "*",
+    "d-help": "*",
+    "jsonwrap": "*"
+	},
+	"subConfigurations": {
+		"vibe-d:tls": "notls"
+	}
+}

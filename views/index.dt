@@ -1,0 +1,127 @@
+doctype 5
+html
+  head
+    meta(charset="utf-8")
+    meta(http-equiv="Content-Type", content="text/html; charset=UTF-8")
+    link(rel="stylesheet", href="css/bootstrap.min.css")
+    link(rel="stylesheet", href="css/site.css")
+    title Ares
+  body
+    ul.nav.nav-tabs(role="tablist")
+      li.nav-item
+        a.nav-link.active(href="#mainTab", data-toggle="tab", role="tab") Ares
+      li.nav-item
+        a.nav-link(href="#optionsTab", data-toggle="tab", role="tab") Options
+      li.nav-item
+        a.nav-link(href="#aboutTab", data-toggle="tab", role="tab") About
+        
+    div.tab-content
+      div.tab-pane.m-3.active(id="mainTab", role="tabpanel")
+        div.btn-group(role="group")
+          button#btnGen.btn.btn-primary.btn-sm Generate
+          button#btnRes.btn.btn-primary.btn-sm Restructure
+          button#btnSim.btn.btn-primary.btn-sm Simulate
+        button#btnClone.btn.btn-outline-primary.btn-sm.ml-3 Clone
+        button#btnClearLog.btn.btn-outline-secondary.btn-sm.ml-3 Clear Log
+        p
+        span#log(style="white-space: pre-wrap")
+        p
+        ul#vizTabsNav.nav.mt-1.nav-pills(role="tablist")
+          - foreach (i; 0 .. bpCount)
+            li.nav-item
+              a.nav-link(href="#vizTab-#{i}", data-toggle="tab", role="tab", class='#{i == 0 ? "active" : ""}') BP #{i+1}
+                // - if (i != 0)
+                //   button.close.closeTab(type="button") ×
+        div#vizTabsContent.tab-content
+          - foreach (i; 0 .. bpCount)
+            div.tab-pane(id="vizTab-#{i}", role="tabpanel", class='#{i == 0 ? "active" : ""}')
+        #graph
+      div.tab-pane.m-3(id="optionsTab", role="tabpanel")
+        p
+        button#btnShowParts.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Show Participants
+        // button#btnShowQuals.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Show Qualifications
+        br
+        form#uploadAresForm(method='post', action='/upload', enctype='multipart/form-data')
+          input#fileInput.btn.btn-primary.btn-sm(name='ares.bin', type='file')
+        input.btn.btn-primary.btn-sm(type="button", value="Download", onclick="location.href = '/download/ares.bin';")
+        button.btn.btn-outline-primary.float-right(type="button", data-toggle="button", onclick="location.href = '/new_session';") Reset session
+        p
+        div#cfgDiv
+          h3 Generator settings
+          div.ml-2
+            div.form-row
+              label.col maximum Branch depth
+              input#inpBD.col-1.form-control.form-control-sm(type="number", value="")
+            div.form-row
+              label.col maximum Function count
+              input#inpFC.col-1.form-control.form-control-sm(type="number", value="")
+            div.form-row
+              label.col average Function duration [from, to]
+              input#inpFD0.col-1.form-control.form-control-sm(type="number", value="", placeholder="bot")
+              input#inpFD1.col-1.form-control.form-control-sm(type="number", value="", placeholder="top")
+            div.form-row
+              label.col xor,and,or,seq probs [in %]
+              input#inpP0.col-1.form-control.form-control-sm(type="number", value="", placeholder="xor")
+              input#inpP1.col-1.form-control.form-control-sm(type="number", value="", placeholder="and")
+              input#inpP2.col-1.form-control.form-control-sm(type="number", value="", placeholder="or")
+              input#inpP3.col-1.form-control.form-control-sm(type="number", value="", placeholder="seq")
+            div.form-row
+              label.col branch count probs (2,3,4,5 branches) [in %]
+              input#inpBC0.col-1.form-control.form-control-sm(type="number", value="", placeholder="2 b")
+              input#inpBC1.col-1.form-control.form-control-sm(type="number", value="", placeholder="3 b")
+              input#inpBC2.col-1.form-control.form-control-sm(type="number", value="", placeholder="4 b")
+              input#inpBC3.col-1.form-control.form-control-sm(type="number", value="", placeholder="5 b")
+          h3 Simulator settings
+          div.ml-2
+            div.form-row
+              label.col simulations per BP
+              input#inpSPP.col-1.form-control.form-control-sm(type="number", value="")
+            div.form-row
+              label.col amount of runners per simulation
+              input#inpRPS.col-1.form-control.form-control-sm(type="number", value="")
+            div.form-row
+              label.col time between runner starts
+              input#inpTBR.col-1.form-control.form-control-sm(type="number", value="")
+            div.form-row
+              label.col take same paths from BP 1 for BPs 2..$
+              input#inpRCP.col-1.form-check(type="checkbox")
+      div.tab-pane.m-3(id="aboutTab", role="tabpanel")
+        p Session count: #{sessionCount}
+        p Contact information: 
+          a(href="javascript:linkto_deobfuscate('nbjmup;c/fslfmfzjodAhnbjm/dpn');") b.erkeleyinc [at] gmail
+
+    div#nodeDiv.input-group.input-group-sm(style="display: none;")
+      table.table-sm
+        tr.node-class
+          th Class
+          td 
+        tr.node-dur
+          th Average Duration
+          td
+            input.form-control.form-control-sm.mb-1(type="number", value="")
+        tr.node-probs
+          th Probability per branch
+          td.d-inline-flex.ml-1
+            div.form-col.ml-1
+              label.row BOID
+              input.row.form-control.form-control-sm(type="number", value="")
+        tr.node-funcs
+          th.align-top Depends on Functions
+          td
+            div.depends-on-group.btn-group-xs(data-toggle="buttons")
+        tr.node-quals
+          th.align-top Qualifications
+          td
+            div.quals-group.btn-group-xs(data-toggle="buttons")
+        tr.node-assigned
+          th.align-top Assigned to
+          td
+            div.assigned-group.btn-group-xs(data-toggle="buttons")
+    div#objCheckDiv(style="display: none;")
+      label.btn.btn-outline-primary.btn-xs.mr-1 OBJ
+
+    script(language="javascript", type="text/javascript", src="js/jquery.min.js")
+    script(language="javascript", type="text/javascript", src="js/popper.min.js")
+    script(language="javascript", type="text/javascript", src="js/bootstrap.min.js")
+    script(language="javascript", type="text/javascript", src="js/viz-lite.js")
+    script(language="javascript", type="text/javascript", src="js/site.js")

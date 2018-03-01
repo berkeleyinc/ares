@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+ares.so
+ares.dylib
+ares.dll
+ares.a
+ares.lib
+ares-test-*
+*.exe
+*.o
+*.obj
+*.lst
+*.s
+lib/

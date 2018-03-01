@@ -1,0 +1,121 @@
+* Roadmap
+  - [ ] Loops für testdaten Generator
+  - [X] Parametereingabe für Funktionen 
+  - [X] Parallelisierung: Eingabe für jeden Knoten ob er sich mit jeweils jedem
+    anderen parallelisieren lässt?
+
+* Gliederung
+- Einleitung
+- Ist
+- Anforderungen
+- State OA
+- Konzept / Entwurf
+- (Implmentierung)
+- Test (Verifikation/Validierung) entspr. Anforderungen
+- empir, Studie
+- Zusafsg. (Bezug auf ziele) /Ausblick
+titelbezug der Überschriften
+
+- Einleitureng
+Motiviation/ Ziele/ Vrgehrensweise(Aufbau der Abreit)
+
+      
+      Automatische Geschäftsprozessrestrukturierung
+
+      1. Einleitung
+      1.1 Motivation
+      1.2 Ziele der Arbeit
+      1.3 Inhaltlicher Aufbau der Arbeit
+      1.4 Verwandte Arbeiten
+      2. Grundlagen zu GPs
+      2.1 Modellierung von GPs
+      2.2 EPK
+      2.2.1 Definition und Modell
+      2.2.2 Simulation
+      3. Analyse
+      3.1 Ausgangsszenario
+      3.1.1 Übersicht und Abgrenzung
+      3.1.2 Anwendungsfälle
+      3.1.3 Ähnliche Software
+      3.2 Funktionale Anforderungen
+      3.2.1 Restrukturierung von GPs
+      3.2.1.1 Varianten der Restrukturierung
+      3.2.2 Simulation von EPKs (+Validierung gefundener Lösungen)
+      3.2.3 Generierung von Testdaten
+      3.3 Nichtfunktionale Anforderungen
+      3.3.1 Leistungsanforderungen
+      3.3.2 Qualitätsanforderungen
+      3.4 Fazit
+      4. Entwurf
+      4.1 Anwendungsarchitektur
+      4.2 Präsentationsschicht / Benutzeroberfläche
+      4.2.1 Webinterface (HTML-Views, 'Diet' Templates, ...)
+      4.2.2 REST-Service (Kopplung mit Anwendungsschicht)
+      4.3 Anwendungsschicht
+      4.3.1 Geschäftsprozess (Process)
+      4.3.2 EPK Modellkomponenten (Function, Event, Connector, ...)
+      4.3.3 Generator
+      4.3.4 Simulator
+      4.3.5 Restrukturierer
+      4.4 Fazit
+      5. Implementierung
+      5.1 Implementierungsstatus
+      5.2 Verwendete Software
+      5.3 Verwendete Software-Komponenten
+      5.4 Implementierungsdetails
+      5.4.1 Generator
+      5.4.2 Simulator
+      5.4.3 Restrukturierer
+      5.4.4 Dateiformat
+      5.6 Fazit
+      6. Evaluierung und Test
+      6.1 Versuchsziele
+      6.2 Versuchsaufbau
+      6.3 Versuchsergebnisse
+      7. Fazit
+      7.1 Zusammenfassung
+      7.2 Bewertung
+      7.3 Ausblick
+      Literaturverzeichnis
+      A Anhang
+
+
+
+* Hinweise
+- Klassendiagramma, Komm.-/Aktivit.-diagramme
+- qual-matrix ?
+- keinen vorzeitigen END
+- discreet event simulation
+
+
+* Misc
+
+- OR-JOIN -> warten auf selbe Anzahl Runner/Prozessmappen wie eingegangen sind ?
+- Maßnahmen zur DLZ-Verkürzung: Auslagern/Verlagern
+- Für Bearbeiter (Participants): Auflistung jeder Funktion um Qualifikation
+  zu setzen
+- Mehr optionen in der GUI?
+- sharing Flag für jede Funktion? (Möglichkeit, Arbeit aufzuteilen)
+
+- Connector branch-prob: prob nur auf die Auswahl des jeweiligen einzelnen
+  branches bezogen
+
+
+* Connector Probleme (nicht-Lokalität)
+
+** 0/1 Marken verwenden, wie Langner, Schneider und Wehler
+- Join Connector würde dann irrtümlicherweise auf 0-Marken warten
+
+** Lösungsidee
+- XOR / AND - nicht-hierarchisch zulassen
+- OR - nur hierarchisch
+
+10.100 - On the Semantics of EPC - S.85
+Quo vadis EPK - OR-Join Problem Lösungsmöglichkeiten
+Vorttrag_Kolod - EPC->Petri Net - S.20
+MAN3.pdf - Prozeßmodellierung mit ereignisgesteuerten Prozeßketten (EPKs)und Petri-Netzen
+
+** Finde partner von UND/ODER wirft Probleme auf, wenn XOR Loops im Verlauf
+stecken
+
+** Optimierung der Assignments von Participants ?
