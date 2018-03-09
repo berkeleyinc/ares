@@ -74,12 +74,13 @@ class WebService {
       auto e4 = p.add([c3.id], new Event);
       auto e5 = p.add([c3.id], new Event);
       auto f6 = p.add([e4.id], new Function);
-      p.add([f6.id], new Participant);
+      auto p7 = p.add([f6.id], new Participant);
       auto f8 = p.add([e5.id], new Function);
       p.add([f8.id], new Participant);
       auto c10 = p.add([f6.id, f8.id], new Connector(Connector.Type.xor));
       auto e11 = p.add([c10.id], new Event);
       auto f12 = p.add([e11.id], new Function);
+      p7.asPart.quals ~= f12.id; 
       p.add([f12.id], new Participant);
       // auto e13 = p.add([f12.id], new Event);
       auto c14 = p.add([f12.id], new Connector(Connector.Type.xor));

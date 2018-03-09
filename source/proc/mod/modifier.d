@@ -50,8 +50,8 @@ class Modifier {
     // Process np = proc_.clone();
     // mos ~= ModsOption(np, nt, [mods[0]]);
 
-    if (!findOptimalModifications(mos, &AssignMod.create)) {
-      // if (!findOptimalModifications(mos, &ParallelizeMod.create, &EmbedMod.create)) {
+    //if (!findOptimalModifications(mos, &AssignMod.create)) {
+    if (!findOptimalModifications(mos, &ParallelizeMod.create, &EmbedMod.create, &AssignMod.create)) {
       result ~= "No optimizations found";
       return [];
     }
@@ -97,13 +97,14 @@ private:
     // grab multiple Runners amount from UserConfig
     const Simulation defSim = defSim_;
     sor.process = proc_;
-    double origTime = generate!(() {
-      auto sim = defSim.gdup;
-      auto t = sor.simulate(sim);
-      sims ~= sim;
-      return t;
-    }).takeExactly(250).mean;
-    // double origTime = MultiSimulator.allPathSimulate(sor, proc_, defSim, sims);
+    // double origTime = generate!(() {
+    //   auto sim = defSim.gdup;
+    //   auto t = sor.simulate(sim);
+    //   sims ~= sim;
+    //   return t;
+    // }).takeExactly(250).mean;
+    double origTime = MultiSimulator.allPathSimulate(sor, proc_, defSim, sims);
+    writeln("origTime: ", origTime);
 
     if (origProcTime_ < 0)
       origProcTime_ = origTime;
@@ -138,7 +139,7 @@ private:
           foreach (i, ref sim; sims)
             times ~= sor.simulate(sim);
           double time = times[].mean;
-          // writeln("DONE");
+          // writeln("DONE, ", time);
           if (pt.runtime == 0 || time < pt.runtime)
             ptms ~= PTM(p, time, m);
         }

@@ -19,6 +19,7 @@ class AssignMod : Modification {
 
   override void apply(Process proc) {
     proc(partID_).asPart.deps = funcIDs_;
+    proc.postProcess();
   }
 
   static Modification[] create(const Process p, in Simulation defSim) {
@@ -83,45 +84,18 @@ private class AssignModFactory {
 
     for (int i = 0; i < min(3, occs.length - 1); i++) {
       auto mn = occs[i];
-
-      pms ~= new AssignMod(mn.key, (proc_(mn.key).deps ~ proc_(mx.key).deps).dup.sort.uniq.array);
-      writeln("maybe ", pms[$ - 1].toString());
+      auto depsWant = (proc_(mn.key).deps ~ proc_(mx.key).deps).dup.sort.uniq.array;
+      ulong[] depsCan;
+      // remove all funcs for which we don't have a qualification
+      foreach (qid; proc_(mn.key).asPart.quals) {
+        if (depsWant.canFind(qid))
+          depsCan ~= qid;
+      }
+      if (depsCan != proc_(mn.key).deps) {
+        pms ~= new AssignMod(mn.key, depsCan);
+        writeln("maybe ", pms[$ - 1].toString());
+      }
     }
-
-    // foreach (ref pa; proc_.parts)
-    //   occByPID[pa.id] = 0;
-    // sor.process = p;
-    // //proc(mn.key).deps = proc(mn.key).deps ~ proc(mx.key).deps;
-    // p(7).deps ~= 16;
-    // p(9).deps ~= 12;
-    // p.postProcess();
-
-    // size_t i = 0;
-    // timeTaken = generate!(() => sor.simulate(sims[i++])).takeExactly(700).mean;
-    // writeln("time: ", timeTaken, " -- occByPID: ", occByPID);
-    /*
-
-    foreach (ref pa; proc_.parts)
-      occByPID[pa.id] = 0;
-    p(7).deps ~= 16;
-    p(9).deps ~= 12;
-    p.postProcess();
-    size_t i = 0;
-    timeTaken = generate!(() => sor.simulate(sims[i++])).takeExactly(700).mean;
-    writeln("time: ", timeTaken, " -- occByPID: ", occByPID);
-
-    // pms ~= AssignMod(9, p(9).deps);
-
-
-    foreach (ref pa; proc_.parts)
-      occByPID[pa.id] = 0;
-    // p(9).deps ~= 16;
-    p(9).deps ~= 16;
-    p.postProcess();
-    i = 0;
-    timeTaken = generate!(() { sor.process = p; return sor.simulate(sims[i++]); }).takeExactly(700).mean;
-    writeln("time: ", timeTaken, " -- occByPID: ", occByPID);
-    */
 
     return pms;
   }

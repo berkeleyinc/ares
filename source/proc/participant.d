@@ -10,6 +10,10 @@ Participant asPart(BO bo) {
   return cast(Participant) bo;
 }
 
+const(Participant) asPart(const BO bo) {
+  return cast(const(Participant)) bo;
+}
+
 class Participant : BO
 {
     ulong[] quals = [];
