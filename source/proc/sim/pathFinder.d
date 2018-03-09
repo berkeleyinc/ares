@@ -5,7 +5,8 @@ import proc.process;
 import std.algorithm : sort, map, canFind;
 import std.array : join, array;
 import std.conv : text;
-import std.stdio : writeln, empty;
+import std.stdio : writeln;
+import std.range : empty;
 
 class PathFinder {
   this(const Process proc) {
@@ -77,8 +78,11 @@ private:
       path.allIDs ~= bo.id;
       path.fIDs ~= bo.id;
       path.time += (cast(Function) bo).dur;
+      //if (path.allIDs.find(bo.succs[0]).length <= 1)
       if (!path.allIDs.canFind(bo.succs[0]))
         findPaths(bo.succs[0], path, subPath, stopOn);
+      else
+        paths_ ~= path;
     } else if (bo.isEvent) {
       path.allIDs ~= bo.id;
       if (bo.succs.empty) {
@@ -87,8 +91,11 @@ private:
         // writeln("reached END Event: " ~ text(bo.id));
         return;
       }
+      //if (path.allIDs.find(bo.succs[0]).length <= 1)
       if (!path.allIDs.canFind(bo.succs[0]))
         findPaths(bo.succs[0], path, subPath, stopOn);
+      else
+        paths_ ~= path;
     } else if (bo.isConn) {
 
       path.allIDs ~= bo.id;

@@ -16,14 +16,14 @@
             3
         ],
         "GEN_branchTypeProbs": [
-            30,
+            20,
             8,
             8,
             60
         ],
-        "GEN_maxDepth": 4,
-        "GEN_maxFuncs": 30,
-        "SIM_parRunnersPerSim": 1,
+        "GEN_maxDepth": 7,
+        "GEN_maxFuncs": 13,
+        "SIM_parRunnersPerSim": 5,
         "SIM_reuseChosenPaths": true,
         "SIM_simsPerBP": 2500,
         "SIM_timeBetweenRunnerStarts": 0

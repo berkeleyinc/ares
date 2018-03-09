@@ -2,11 +2,12 @@ module proc.sim.runner;
 
 import proc.process;
 
-import std.stdio : writeln, empty;
+import std.stdio : writeln;
 import std.conv : text;
 import std.algorithm;
 import std.typecons;
 import std.array;
+import std.range.primitives : empty;
 
 class Runner {
   alias Queue = Runner[][ulong];
@@ -36,19 +37,21 @@ class Runner {
   //   
 
   // }
-  this(void delegate(string) fprint, size_t id, const Process p, ref Queue q, ulong bid,
-      Nullable!ulong endID = Nullable!ulong.init) {
+  this(void delegate(string) fprint, void delegate(ulong, ulong, ulong) fOnStartFunc, size_t id, const Process p,
+      ref Queue q, ulong bid, Nullable!ulong endID = Nullable!ulong.init) {
     this.uniqueID = uniqueIDCounter_++;
     this.id = id;
     currBO = p.bos[bid];
     process_ = p;
     queue_ = &q;
     print = fprint;
+    onStartFunction = fOnStartFunc;
     endID_ = endID;
     // writeln("new Runner " ~ text(id) ~ ", start=" ~ currBO.name);
   }
 
   void delegate(string) print;
+  void delegate(ulong, ulong, ulong) onStartFunction;
 
   this(Runner r, ulong bid) {
     this.uniqueID = uniqueIDCounter_++;
@@ -62,6 +65,7 @@ class Runner {
     // concurrentCounts = r.concurrentCounts;
     branchData = r.branchData.dup;
     print = r.print;
+    onStartFunction = r.onStartFunction;
     lastBOID = r.lastBOID;
     endID_ = r.endID_;
     // writeln("new split Runner " ~ text(id) ~ ", start=" ~ currBO.name);
@@ -145,7 +149,8 @@ class Runner {
       if (continueTime_ == 0) {
         // if we came up in the queue, we can start
         if (myTurn) {
-          startFunction();
+          ulong nextPartID = currBO.asFunc.parts.find!findMe()[0];
+          startFunction(nextPartID);
           return State.wait;
         }
 
@@ -207,9 +212,11 @@ class Runner {
     // writeln(str ~ ": next BO: " ~ currBO.name);
   }
 
-  void startFunction() {
+  void startFunction(ulong partID) {
     assert(currBO.isFunc);
     auto dur = currBO.asFunc.dur;
+    if (onStartFunction)
+      onStartFunction(partID, currentTime_, dur);
 
     continueTime_ = currentTime_ + dur;
 
@@ -224,7 +231,7 @@ class Runner {
     if (currBO.isFunc) {
       foreach (pid; currBO.asFunc.parts) {
         if (pid !in *queue_ || (*queue_)[pid].empty) {
-          startFunction();
+          startFunction(pid);
           // writeln("PUTTING ", str, " INTO PID=", pid);
           (*queue_)[pid] ~= this;
           return State.wait;

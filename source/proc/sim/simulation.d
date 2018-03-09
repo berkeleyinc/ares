@@ -19,4 +19,14 @@ struct Simulation {
     // sim.startTimePerRunner ~= RunnerTime(1UL, 0UL);
     return sim;
   }
+
+  static Simulation construct(size_t runnerCount, ulong timeBetween) {
+    Simulation sim;
+    ulong rt = 0;
+    foreach (size_t i; 0 .. runnerCount) {
+      sim.startTimePerRunner ~= [tuple!("rid", "time")(i, rt)];
+      rt += timeBetween;
+    }
+    return sim;
+  }
 }

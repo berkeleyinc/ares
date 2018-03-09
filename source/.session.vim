@@ -8,20 +8,19 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +51 proc/mod/modifier.d
-badd +75 proc/sim/simulator.d
-badd +47 proc/sim/multiple.d
-badd +82 proc/mod/embedMod.d
-badd +268 proc/process.d
-badd +320 ~/th/code/ares/public/js/site.js
-badd +67 proc/sim/pathFinder.d
-badd +107 proc/generator.d
-badd +40 web/service.d
-badd +1 proc/sim/runner.d
-badd +1 \[Plugins]
+badd +99 proc/mod/modifier.d
+badd +34 proc/sim/simulator.d
+badd +40 proc/sim/multiple.d
+badd +72 web/service.d
+badd +61 proc/mod/assignMod.d
+badd +5 proc/mod/embedMod.d
+badd +6 util.d
+badd +77 proc/sim/pathFinder.d
+badd +1 proc/sim/simulation.d
+badd +66 proc/mod/parallelizeMod.d
 argglobal
 silent! argdel *
-edit proc/sim/runner.d
+edit proc/sim/pathFinder.d
 set splitbelow splitright
 wincmd t
 set winminheight=1 winheight=1 winminwidth=1 winwidth=1
@@ -35,11 +34,11 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 105 - ((13 * winheight(0) + 18) / 37)
+let s:l = 86 - ((19 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-105
+86
 normal! 05|
 lcd ~/th/code/ares/source
 tabnext 1

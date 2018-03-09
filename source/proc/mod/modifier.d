@@ -3,11 +3,11 @@ module proc.mod.modifier;
 import proc.process;
 
 import std.algorithm;
-import std.stdio : writeln, empty;
+import std.stdio : writeln;
 import std.array;
 import std.typecons;
 import std.math : abs, round;
-import std.range : iota, generate, take, takeExactly, repeat;
+import std.range : iota, generate, take, takeExactly, repeat, empty;
 import std.conv;
 import std.datetime;
 import std.datetime.stopwatch : AutoStart, StopWatch;
@@ -19,12 +19,14 @@ import proc.sim.multiple;
 import proc.mod.modification;
 import proc.mod.embedMod;
 import proc.mod.parallelizeMod;
+import proc.mod.assignMod;
 
 import util;
 
 class Modifier {
-  this(const Process p) {
+  this(const Process p, const Simulation defSim) {
     proc_ = p;
+    defSim_ = defSim;
   }
 
   Process[] modify(out string resultStr) {
@@ -48,7 +50,8 @@ class Modifier {
     // Process np = proc_.clone();
     // mos ~= ModsOption(np, nt, [mods[0]]);
 
-    if (!findOptimalModifications(mos, &ParallelizeMod.create, &EmbedMod.create)) {
+    if (!findOptimalModifications(mos, &AssignMod.create)) {
+      // if (!findOptimalModifications(mos, &ParallelizeMod.create, &EmbedMod.create)) {
       result ~= "No optimizations found";
       return [];
     }
@@ -78,19 +81,32 @@ class Modifier {
   }
 
 private:
+  const Simulation defSim_;
+
   Rebindable!(const Process) proc_;
   double origProcTime_ = -1; // BP Simulation.def time from input process
 
   alias ModsOption = Tuple!(Process, "proc", double, "runtime", Modification[], "mods");
   // returns saved time units
   bool findOptimalModifications(FactoryFuncs...)(out ModsOption[] mos, auto ref FactoryFuncs ffuncs) {
+    writeln(__FUNCTION__);
     Simulation[] sims;
-    double origTime = MultiSimulator.allPathSimulate(proc_, sims);
+    Simulator sor = new Simulator(null);
+    // double origTime = MultiSimulator.allPathSimulate(proc_, sims);
+
+    // grab multiple Runners amount from UserConfig
+    const Simulation defSim = defSim_;
+    sor.process = proc_;
+    double origTime = generate!(() {
+      auto sim = defSim.gdup;
+      auto t = sor.simulate(sim);
+      sims ~= sim;
+      return t;
+    }).takeExactly(250).mean;
+    // double origTime = MultiSimulator.allPathSimulate(sor, proc_, defSim, sims);
 
     if (origProcTime_ < 0)
       origProcTime_ = origTime;
-
-    Simulator sor = new Simulator(null);
 
     ModsOption[] pts = [ModsOption(proc_.clone(), origTime, [])], donePts = [];
     do {
@@ -100,7 +116,7 @@ private:
         Modification[] pms;
 
         foreach (createFunc; ffuncs)
-          pms ~= createFunc(pt.proc);
+          pms ~= createFunc(pt.proc, defSim);
         // pms ~= factory.create();
         // pms ~= EmbedMod.create(pt.proc);
         // pms ~= ParallelizeMod.create(pt.proc);
@@ -119,7 +135,7 @@ private:
           sor.process = p;
           // double time = MultiSimulator.allPathSimulate(sor, proc_);
           ulong[] times;
-          foreach (i, sim; sims)
+          foreach (i, ref sim; sims)
             times ~= sor.simulate(sim);
           double time = times[].mean;
           // writeln("DONE");

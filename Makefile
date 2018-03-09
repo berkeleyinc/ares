@@ -1,7 +1,12 @@
 
-build_and_run:
-	dub build --skip-registry=all --compiler=dmd
+build_and_run: build
 	gdb ares-bin -ex r -ex bt -ex q
+
+dbg: build
+	gdb ares-bin -ex r -ex bt
+
+build:
+	dub build --skip-registry=all --compiler=dmd
 
 release:
 	dub build --build=release --compiler=ldc && cp ares-bin /tmp/ares-bin.new

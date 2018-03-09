@@ -269,8 +269,13 @@ class WebService {
     logInfo(__FUNCTION__);
     // auto newProcess = process.clone();
 
+    const size_t runnerCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parRunnersPerSim].as!size_t;
+    const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenRunnerStarts].as!ulong;
+    Simulation defSim = Simulation.construct(runnerCount, timeBetween);
+
     JSONValue json;
-    Modifier m = new Modifier(process);
+    Modifier m = new Modifier(process, defSim);
+
     string result;
 
     string[] dots;
@@ -312,14 +317,7 @@ class WebService {
     const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenRunnerStarts].as!ulong;
     string msg = "Running " ~ simCount.text ~ " simulations per BP with " ~ runnerCount.text ~ " Runners each ...\n";
 
-    Simulation startSim;
-    {
-      ulong rt = 0;
-      foreach (size_t i; 0 .. runnerCount) {
-        startSim.startTimePerRunner ~= [tuple!("rid", "time")(i, rt)];
-        rt += timeBetween;
-      }
-    }
+    Simulation defSim = Simulation.construct(runnerCount, timeBetween);
 
     ulong[] times;
     times.length = processCount;
@@ -330,13 +328,13 @@ class WebService {
     foreach (i; 0 .. simCount) {
       import opmix.dup;
 
-      Simulation sim = startSim.gdup;
+      Simulation sim = defSim.gdup;
       Simulator sor = new Simulator(null);
 
       // foreach (i; parallel(iota(0, simCount))) {
       foreach (bpID, const ref bp; ps) {
         if (!Sessions.get(sessionID_).cfg[Cfg.R.SIM_reuseChosenPaths].as!bool)
-          sim = startSim.gdup;
+          sim = defSim.gdup;
         // result ~= "BP " ~ text(bpID) ~ "\n";
         sor.process = bp;
         auto timeTaken = sor.simulate(sim);

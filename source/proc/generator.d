@@ -5,8 +5,9 @@ import proc.process;
 import std.stdio;
 import std.random;
 import std.conv : text;
-import std.algorithm : map;
+import std.algorithm : map, each;
 import std.array : array;
+import std.range : empty;
 
 import config;
 

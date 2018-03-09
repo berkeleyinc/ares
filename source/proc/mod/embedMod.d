@@ -2,6 +2,7 @@ module proc.mod.embedMod;
 
 import proc.mod.modification;
 import proc.process;
+import proc.sim.simulation;
 
 import std.algorithm.iteration;
 
@@ -32,7 +33,7 @@ class EmbedMod : Modification {
     p.movePart(from, to, bwStart, bwEnd);
   }
 
-  static Modification[] create(const Process p) {
+  static Modification[] create(const Process p, in Simulation defSim) {
     return (new EmbedModFactory(p)).create();
   }
 

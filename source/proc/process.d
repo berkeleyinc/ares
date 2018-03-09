@@ -8,11 +8,12 @@ public import proc.connector;
 
 import std.algorithm : canFind, sort, uniq, remove, each, find;
 import std.algorithm.setops : setIntersection;
-import std.stdio : writeln, empty;
+import std.stdio : writeln;
 import std.conv : text;
 import std.json;
 import std.array;
 import std.typecons : tuple, Nullable;
+import std.range.primitives : empty;
 import msgpack;
 
 class Process {

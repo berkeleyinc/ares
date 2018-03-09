@@ -5,7 +5,7 @@ import proc.sim.runner;
 import proc.process;
 
 import std.algorithm;
-import std.stdio : writeln, empty;
+import std.stdio : writeln;
 import std.conv : text;
 import std.random;
 import std.array;
@@ -87,7 +87,7 @@ class Simulator {
         }
         for (int i = 0; i < sim.startTimePerRunner.length; i++) {
           if (currentTime_ >= sim.startTimePerRunner[i].time && !runnerIdxStarted.canFind(i)) {
-            runners_ ~= new Runner(&print, sim.startTimePerRunner[i].rid, proc_, queue_, startBO.id, endID);
+            runners_ ~= new Runner(&print, fnOnStartFunction, sim.startTimePerRunner[i].rid, proc_, queue_, startBO.id, endID);
             runnerIdxStarted ~= i;
             // sim.startTimePerRunner = sim.startTimePerRunner.remove(i);
             // i--;
@@ -130,6 +130,7 @@ class Simulator {
   void delegate(ulong currTime, ulong cID, ulong lastID) fnOnRunnerJoin;
   void delegate(ulong currTime, ulong cID, ulong firstID) fnOnRunnerSplit;
   void delegate() fnOnIncTime;
+  void delegate(ulong participantID, ulong currTime, ulong duration) fnOnStartFunction;
 
 private:
   Rebindable!(const Process) proc_;
@@ -345,7 +346,7 @@ private:
   }
 
   void onRunnerEnd(ref int runnerElemId) {
-    // writeln("RUNNER END !!! TIME=", r.time, "\n\n");
+    // writeln("RUNNER END !!! TIME=", runners_[runnerElemId].time, "\n\n");
     print(runners_[runnerElemId].str ~ " finished.");
     // runnerResults_[runners_[runnerElemId].id] = runners_[runnerElemId].str;
     runners_ = runners_.remove(runnerElemId--);

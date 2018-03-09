@@ -31,9 +31,13 @@ class MultiSimulator {
   static double allPathSimulate(const Process inp, out Simulation[] sims) {
     return allPathSimulate(new Simulator(inp), inp, sims);
   }
+  static double allPathSimulate(Simulator sor, const Process inp, out Simulation[] sims) {
+    return allPathSimulate(sor, inp, Simulation.def, sims);
+  }
+
   // simulates input BP and returns time units for all path simulations
   // sims: those Simulations consist of SplitOptions that choose all avaiable paths
-  static double allPathSimulate(Simulator sor, const Process inp, out Simulation[] sims) {
+  static double allPathSimulate(Simulator sor, const Process inp, in Simulation defSim, out Simulation[] sims) {
     PathFinder pf = new PathFinder(inp);
 
     ulong[][] paths = pf.findPaths();
@@ -41,7 +45,8 @@ class MultiSimulator {
       throw new Exception("PathFinder couldn't find any paths");
 
     foreach (ref p; paths) {
-      Simulation sim = Simulation.def;
+      import opmix.dup; 
+      Simulation sim = defSim.gdup;
       Simulation.SplitOption[] sos;
       foreach (i, bo; p) {
         if (inp(bo).isConn && inp(bo).succs.length > 1 && inp(bo).asConn.type != Connector.Type.and) {

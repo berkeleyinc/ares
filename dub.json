@@ -8,7 +8,7 @@
 	"license": "proprietary",
   "dependencies": {
     "msgpack-d": ">=1.0.0-beta",
-		"vibe-d": "*",
+		"vibe-d": ">=0.8.3-rc.1",
 		"vibe-d:tls": "*",
     "diet-ng": "*",
     "d-help": "*",

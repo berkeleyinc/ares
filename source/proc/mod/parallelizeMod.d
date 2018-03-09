@@ -2,6 +2,7 @@ module proc.mod.parallelizeMod;
 
 import proc.mod.modification;
 import proc.process;
+import proc.sim.simulation;
 
 import std.range;
 import std.algorithm;
@@ -46,7 +47,7 @@ class ParallelizeMod : Modification {
     proc.postProcess();
   }
 
-  static Modification[] create(const Process p) {
+  static Modification[] create(const Process p, in Simulation defSim) {
     return (new ParallelizeModFactory(p)).create();
   }
 
