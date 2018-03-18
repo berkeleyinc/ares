@@ -14,12 +14,10 @@ class PathFinder {
   }
 
   struct Path {
-    ulong[] fIDs;
     ulong time = 0;
     ulong[] allIDs;
 
     Path opAddAssign(const ref Path path) {
-      fIDs ~= path.fIDs;
       time += path.time;
       return this;
     }
@@ -76,17 +74,17 @@ private:
     if (bo.isFunc) {
       // writeln(bo.name ~ ", waiting for " ~ text((cast(Function) bo).dur));
       path.allIDs ~= bo.id;
-      path.fIDs ~= bo.id;
       path.time += (cast(Function) bo).dur;
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
       if (!path.allIDs.canFind(bo.succs[0]))
         findPaths(bo.succs[0], path, subPath, stopOn);
-      else
+      else {
         paths_ ~= path;
+        return;
+      }
     } else if (bo.isEvent) {
       path.allIDs ~= bo.id;
       if (bo.succs.empty) {
-        path.fIDs ~= bo.id;
         paths_ ~= path;
         // writeln("reached END Event: " ~ text(bo.id));
         return;
@@ -94,8 +92,10 @@ private:
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
       if (!path.allIDs.canFind(bo.succs[0]))
         findPaths(bo.succs[0], path, subPath, stopOn);
-      else
+      else {
         paths_ ~= path;
+        return;
+      }
     } else if (bo.isConn) {
 
       path.allIDs ~= bo.id;
@@ -125,14 +125,14 @@ private:
         path = bigPath;
         // writeln(">>> path += bigPath: " ~ text(path));
 
-        const BO* lastBO = &process_.bos[bigPath.fIDs[$ - 1]];
+        const BO* lastBO = &process_.bos[bigPath.allIDs[$ - 1]];
         if (!lastBO.succs.empty)
           findPaths(lastBO.succs[0], path, subPath + 1, stopOn);
         if (!isAnd) {
           foreach (p; branchPaths) {
             if (p == bigPath)
               continue;
-            const BO* lastBO2 = &process_.bos[p.fIDs[$ - 1]];
+            const BO* lastBO2 = &process_.bos[p.allIDs[$ - 1]];
             if (!lastBO2.succs.empty) {
               // prevent stack overflow when processing loops
               // if (path.allIDs.canFind(lastBO2.succs[0]))

@@ -2,9 +2,9 @@ module proc.process;
 
 public import proc.businessObject;
 public import proc.func;
-public import proc.participant;
+public import proc.resource;
 public import proc.event;
-public import proc.connector;
+public import proc.gate;
 
 import std.algorithm : canFind, sort, uniq, remove, each, find;
 import std.algorithm.setops : setIntersection;

@@ -14,7 +14,7 @@ class AssignMod : Modification {
   }
 
   override @property string toString() {
-    return "Assign " ~ partID_.text ~ " to funcs: " ~ funcIDs_.text;
+    return "Assign P" ~ partID_.text ~ " to funcs: " ~ funcIDs_.text;
   }
 
   override void apply(Process proc) {
@@ -61,15 +61,8 @@ private class AssignModFactory {
 
     sor.fnOnStartFunction = (ulong partID, ulong currTime, ulong dur) {
       // writeln("Start P", partID, ", currTime=", currTime, ", dur=", dur);
-      occByPID[partID]++;
+      occByPID[partID] += dur;
     };
-    // TODO find runnerCount for current UserCfg
-    // Simulation defSim = Simulation.construct(runnerCount, timeBetween);
-    // defSim.startTimePerRunner ~= Simulation.RunnerTime(1UL, 0UL);
-    // defSim.startTimePerRunner ~= Simulation.RunnerTime(2UL, 0UL);
-
-    // if (timeTaken!= 382764)
-    //   return [];
 
     foreach (ref pa; proc_.parts)
       occByPID[pa.id] = 0;
@@ -82,7 +75,7 @@ private class AssignModFactory {
     //auto mn = occs[0]; //occByPID.byKeyValue().minElement!"a.value";
     auto mx = occs[$ - 1]; //occByPID.byKeyValue().maxElement!"a.value";
 
-    for (int i = 0; i < min(3, occs.length - 1); i++) {
+    for (int i = 0; i < occs.length - 1; i++) {
       auto mn = occs[i];
       auto depsWant = (proc_(mn.key).deps ~ proc_(mx.key).deps).dup.sort.uniq.array;
       ulong[] depsCan;
