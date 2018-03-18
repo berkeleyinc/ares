@@ -69,7 +69,7 @@ class Generator {
 
       size_t n;
       if (*pFuncs + 1 >= gc.maxFuncs || *pDepth >= gc.maxDepth) {
-        // if (typeid(from) == typeid(Function)) { // && typeid(from.deps[0]) != typeid(Connector)) {
+        // if (typeid(from) == typeid(Function)) { // && typeid(from.deps[0]) != typeid(Gate)) {
         //  writeln("null, pFuncs=", *pFuncs);
         //  return null;
         //}
@@ -86,30 +86,30 @@ class Generator {
         (*pFuncs)++;
         Function f = bp.add([from.id], new Function());
         f.dur = uniform!"[]"(functionDurationLimits[0], functionDurationLimits[1]);
-        Participant[] ps;
+        Resource[] ps;
 
-        enum ParticipantAssignStrategy : size_t {
+        enum ResourceAssignStrategy : size_t {
           newOne = 0,
           useExisting = 1,
           moreThanOne = 2
         }
 
-        ParticipantAssignStrategy pas = cast(ParticipantAssignStrategy) dice(50, bp.parts.empty ? 0 : 25, 25);
+        ResourceAssignStrategy pas = cast(ResourceAssignStrategy) dice(50, bp.ress.empty ? 0 : 25, 25);
 
         final switch (pas) {
-        case ParticipantAssignStrategy.newOne:
-          ps ~= bp.add([f.id], new Participant());
+        case ResourceAssignStrategy.newOne:
+          ps ~= bp.add([f.id], new Resource());
           break;
-        case ParticipantAssignStrategy.useExisting:
-          ps ~= bp.parts[uniform(0, bp.parts.length)];
+        case ResourceAssignStrategy.useExisting:
+          ps ~= bp.ress[uniform(0, bp.ress.length)];
           ps[$ - 1].deps ~= [f.id];
           break;
-        case ParticipantAssignStrategy.moreThanOne:
+        case ResourceAssignStrategy.moreThanOne:
           foreach (i; 0 .. uniform(2, 5))
-            ps ~= bp.add([f.id], new Participant());
+            ps ~= bp.add([f.id], new Resource());
           break;
         }
-        // random Qualifications for each Participant
+        // random Qualifications for each Resource
         // we don't care if p.quals will be empty because during postProcess(), this is fixed
         ps.each!(p => p.quals = bp.funcs.randomSample(uniform!"[]"(0, bp.funcs.length / 2)).map!(a => a.id).array);
         if (*pFuncs >= gc.maxFuncs || *pDepth >= gc.maxDepth) {
@@ -121,16 +121,16 @@ class Generator {
       (*pDepth)++;
       size_t branchCount = dice([0.0, 0.0] ~ branchCountProbs);
       size_t endBranchCount = 0; // dice(50, 50, 5);
-      Connector.Type type;
+      Gate.Type type;
       switch (par.type) {
       case Paradigm.Type.xor:
-        type = Connector.Type.xor;
+        type = Gate.Type.xor;
         break;
       case Paradigm.Type.or:
-        type = Connector.Type.or;
+        type = Gate.Type.or;
         break;
       case Paradigm.Type.and:
-        type = Connector.Type.and;
+        type = Gate.Type.and;
         endBranchCount = 0; // can't end branches in AND-blocks
         break;
       default:
@@ -138,11 +138,11 @@ class Generator {
       }
       // if (insideAnd)
       //   endBranchCount = 0;
-      BO startConn = bp.add([from.id], new Connector(type));
+      BO startConn = bp.add([from.id], new Gate(type));
 
-      // if (type == Connector.Type.xor) {
-      //   foreach (cs; bp.cnns) {
-      //     if (cs.type == Connector.Type.xor && cs.deps.length > 1 && from.id != cs.id)
+      // if (type == Gate.Type.xor) {
+      //   foreach (cs; bp.gates) {
+      //     if (cs.type == Gate.Type.xor && cs.deps.length > 1 && from.id != cs.id)
       //       cs.deps ~= startConn.id;
       //   }
       // }
@@ -158,7 +158,7 @@ class Generator {
           BO line = startConn;
           if (canSpend > 0) {
             line = generate(Limits(gc.maxDepth, *pFuncs + canSpend), startConn, pDepth, pFuncs,
-                insideAnd || type == Connector.Type.and);
+                insideAnd || type == Gate.Type.and);
           }
           addEnd(line);
         } else {
@@ -170,8 +170,8 @@ class Generator {
       if (endBranchCount > 0 && branchCount - endBranchCount <= 1) {
         endConn = branches[0];
       } else {
-        endConn = bp.add(branchIds, new Connector(type));
-        // writeln("adding ENDConn " ~ endConn.name ~ "(" ~ (cast(Connector) endConn)
+        endConn = bp.add(branchIds, new Gate(type));
+        // writeln("adding ENDConn " ~ endConn.name ~ "(" ~ (cast(Gate) endConn)
         //     .symbol ~ "), branchCount: " ~ text(branchCount) ~ ", endBranchCount: " ~ text(endBranchCount));
       }
       (*pDepth)--;

@@ -18,7 +18,7 @@ class AssignMod : Modification {
   }
 
   override void apply(Process proc) {
-    proc(partID_).asPart.deps = funcIDs_;
+    proc(partID_).asRes.deps = funcIDs_;
     proc.postProcess();
   }
 
@@ -64,12 +64,12 @@ private class AssignModFactory {
       occByPID[partID] += dur;
     };
 
-    foreach (ref pa; proc_.parts)
+    foreach (ref pa; proc_.ress)
       occByPID[pa.id] = 0;
     timeTaken = MultiSimulator.allPathSimulate(sor, proc_, defSim, sims);
     // timeTaken = generate!(() { auto sim = defSim.gdup; auto t = sor.simulate(sim); sims ~= sim; return t;  })
     //   .takeExactly(700).mean;
-    writeln("time: ", timeTaken, " -- occByPID: ", occByPID, ", ", proc_.parts.length, " parts");
+    writeln("time: ", timeTaken, " -- occByPID: ", occByPID, ", ", proc_.ress.length, " ress");
 
     auto occs = occByPID.byKeyValue().array.sort!"a.value < b.value";
     //auto mn = occs[0]; //occByPID.byKeyValue().minElement!"a.value";
@@ -80,7 +80,7 @@ private class AssignModFactory {
       auto depsWant = (proc_(mn.key).deps ~ proc_(mx.key).deps).dup.sort.uniq.array;
       ulong[] depsCan;
       // remove all funcs for which we don't have a qualification
-      foreach (qid; proc_(mn.key).asPart.quals) {
+      foreach (qid; proc_(mn.key).asRes.quals) {
         if (depsWant.canFind(qid))
           depsCan ~= qid;
       }

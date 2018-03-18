@@ -106,7 +106,7 @@ class Runner {
   }
 
   void incTime(ulong step) {
-    bool runnersInQueueOfCurrentFunc = currBO.isFunc ? currBO.asFunc.parts.any!(a => a in (*queue_)) : false;
+    bool runnersInQueueOfCurrentFunc = currBO.isFunc ? currBO.asFunc.ress.any!(a => a in (*queue_)) : false;
     if (currBO.id !in (*queue_) && !runnersInQueueOfCurrentFunc)
       return;
 
@@ -136,32 +136,32 @@ class Runner {
     if (currState == State.wait) {
       if (continueTime_ > currTime)
         return State.wait;
-      int n = currBO.asFunc.parts.fold!((t, p) => (p in *queue_ && !(*queue_)[p].empty) ? t + 1 : t)(0);
-      // n: how many Participant-queues are busy
-      auto m = currBO.asFunc.parts.length;
+      int n = currBO.asFunc.ress.fold!((t, p) => (p in *queue_ && !(*queue_)[p].empty) ? t + 1 : t)(0);
+      // n: how many Resource-queues are busy
+      auto m = currBO.asFunc.ress.length;
       // writeln("N=" ~ text(n), ", M=", m);
       // assert(n <= 1);
 
-      // find out if this Runner is the next entry in the queue for a specific p (Participant)
+      // find out if this Runner is the next entry in the queue for a specific p (Resource)
       auto findMe = (size_t p) => !(*queue_)[p].empty && (*queue_)[p][0] == this;
 
-      bool myTurn = any!findMe(currBO.asFunc.parts);
+      bool myTurn = any!findMe(currBO.asFunc.ress);
       if (continueTime_ == 0) {
         // if we came up in the queue, we can start
         if (myTurn) {
-          ulong nextPartID = currBO.asFunc.parts.find!findMe()[0];
+          ulong nextPartID = currBO.asFunc.ress.find!findMe()[0];
           startFunction(nextPartID);
           return State.wait;
         }
 
         currWaitState = WaitState.inQueue;
 
-        // any Participant queues of current Function is empty ?
-        bool anyEmpty = currBO.asFunc.parts.any!(p => p !in *queue_ || (*queue_)[p].empty);
+        // any Resource queues of current Function is empty ?
+        bool anyEmpty = currBO.asFunc.ress.any!(p => p !in *queue_ || (*queue_)[p].empty);
         if (anyEmpty && currBO.id in *queue_ && (*queue_)[currBO.id][0] == this) {
-          // if currBO (waiting-) queue has elems but the participants queues not, fill Participant queue
+          // if currBO (waiting-) queue has elems but the resources queues not, fill Resource queue
 
-          size_t p = currBO.asFunc.parts.find!(p => p in *queue_ && (*queue_)[p].empty)[0]; // there has to be an empty Participants queue
+          size_t p = currBO.asFunc.ress.find!(p => p in *queue_ && (*queue_)[p].empty)[0]; // there has to be an empty Resources queue
           (*queue_)[p] ~= this;
           (*queue_)[currBO.id] = (*queue_)[currBO.id][1 .. $];
         }
@@ -170,7 +170,7 @@ class Runner {
       }
       assert(myTurn);
       // find the queue which has this Runner
-      size_t p = currBO.asFunc.parts.find!findMe[0];
+      size_t p = currBO.asFunc.ress.find!findMe[0];
       // remove this Runner from queue since continueTime < currTime (func time is up)
       (*queue_)[p] = (*queue_)[p][1 .. $];
 
@@ -229,7 +229,7 @@ class Runner {
 
   State validateStep() {
     if (currBO.isFunc) {
-      foreach (pid; currBO.asFunc.parts) {
+      foreach (pid; currBO.asFunc.ress) {
         if (pid !in *queue_ || (*queue_)[pid].empty) {
           startFunction(pid);
           // writeln("PUTTING ", str, " INTO PID=", pid);
@@ -241,7 +241,7 @@ class Runner {
 
       continueTime_ = 0;
 
-      // all Participants (participant.queue.length>1) are busy, so putting this Runner into the queue of the current Function
+      // all Resources (resource.queue.length>1) are busy, so putting this Runner into the queue of the current Function
       (*queue_)[currBO.id] ~= this;
       currWaitState = WaitState.inQueue;
       return State.wait;
@@ -250,7 +250,7 @@ class Runner {
         return State.next;
       // print(str ~ ": reached END Event: " ~ text(currBO.id));
       return State.end;
-    } else if (currBO.isConn) {
+    } else if (currBO.isGate) {
       bool isSplit = currBO.succs.length > 1;
       return isSplit ? State.split : State.join;
     }
@@ -265,7 +265,7 @@ class Runner {
 
   // LILO array
   struct BranchData {
-    // how many branches did we select (only for OR-Connector)
+    // how many branches did we select (only for OR-Gate)
     size_t concurrentCount;
     // the uniqueID of the Runner that splited this branch
     // ulong startID;

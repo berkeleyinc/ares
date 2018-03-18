@@ -69,24 +69,24 @@ class WebService {
       Process p = new Process;
       auto e0 = p.add([], new Event);
       auto f1 = p.add([e0.id], new Function);
-      p.add([f1.id], new Participant);
-      auto c3 = p.add([f1.id], new Connector(Connector.Type.xor));
+      p.add([f1.id], new Resource);
+      auto c3 = p.add([f1.id], new Gate(Gate.Type.xor));
       auto e4 = p.add([c3.id], new Event);
       auto e5 = p.add([c3.id], new Event);
       auto f6 = p.add([e4.id], new Function);
-      auto p7 = p.add([f6.id], new Participant);
+      auto p7 = p.add([f6.id], new Resource);
       auto f8 = p.add([e5.id], new Function);
-      p.add([f8.id], new Participant);
-      auto c10 = p.add([f6.id, f8.id], new Connector(Connector.Type.xor));
+      p.add([f8.id], new Resource);
+      auto c10 = p.add([f6.id, f8.id], new Gate(Gate.Type.xor));
       auto e11 = p.add([c10.id], new Event);
       auto f12 = p.add([e11.id], new Function);
-      p7.asPart.quals ~= f12.id; 
-      p.add([f12.id], new Participant);
+      p7.asRes.quals ~= f12.id; 
+      p.add([f12.id], new Resource);
       // auto e13 = p.add([f12.id], new Event);
-      auto c14 = p.add([f12.id], new Connector(Connector.Type.xor));
+      auto c14 = p.add([f12.id], new Gate(Gate.Type.xor));
       auto e15 = p.add([c14.id], new Event);
       auto f16 = p.add([e15.id], new Function);
-      p.add([f16.id], new Participant);
+      p.add([f16.id], new Resource);
       c10.deps ~= f16.id;
       auto e18 = p.add([c14.id], new Event);
       p.postProcess();
@@ -153,18 +153,18 @@ class WebService {
       if (!dur.isNull) {
         el.asFunc.dur = dur;
       }
-    } else if (el.isPart) {
-      writeln("Changing qual/assignment of Participant ", id, ", QID=", qid, ", DID=", did);
+    } else if (el.isRes) {
+      writeln("Changing qual/assignment of Resource ", id, ", QID=", qid, ", DID=", did);
       if (!qid.isNull)
-        applyChange(el.asPart.quals, qid);
+        applyChange(el.asRes.quals, qid);
       else {
         applyChange(el.deps, did);
         process.postProcess();
       }
-    } else if (el.isConn) {
-      writeln("Changing branch probs of Connector ", id, ", oid=", oid, ", newProb=", p);
-      foreach (ref pe; el.asConn.probs)
-        if (pe.boId == oid)
+    } else if (el.isGate) {
+      writeln("Changing branch probs of Gate ", id, ", oid=", oid, ", newProb=", p);
+      foreach (ref pe; el.asGate.probs)
+        if (pe.boID == oid)
           pe.prob = p;
     }
     res.writeBody("OK", "text/plain");
@@ -187,7 +187,7 @@ class WebService {
       }
 
       string res;
-      foreach (e; [Function.stringof, Event.stringof, Connector.stringof, Participant.stringof])
+      foreach (e; [Function.stringof, Event.stringof, Gate.stringof, Resource.stringof])
         res ~= packWithType(e);
       return res;
     }
@@ -200,11 +200,11 @@ class WebService {
       const auto fs = process.listAllFuncsBefore(el);
       // writeln("\n\nBWFORE: ", fs);
       json["beforeFuncs"] = fs;
-    } else if (el.isPart) {
+    } else if (el.isRes) {
       ulong[] fs;
-      foreach (boId; process.bos.byKey())
-        if (process.bos[boId].isFunc)
-          fs ~= boId;
+      foreach (boID; process.bos.byKey())
+        if (process.bos[boID].isFunc)
+          fs ~= boID;
       json["allFuncs"] = fs;
     }
 
@@ -304,7 +304,7 @@ class WebService {
     dot_ = generateDot(process, dotGenOpts_);
     JSONValue json;
     json["log"] = "Created " ~ text(process.funcs.length) ~ " Functions, " ~ text(
-        process.cnns.length) ~ " Connectors and " ~ text(process.parts.length) ~ " Participants.";
+        process.gates.length) ~ " Gates and " ~ text(process.ress.length) ~ " Resources.";
     json["dot"] = dot_.dup;
     res.writeBody(json.toString(), "application/json");
   }

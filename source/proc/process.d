@@ -18,9 +18,9 @@ import msgpack;
 
 class Process {
   Function[] funcs;
-  Participant[] parts;
+  Resource[] ress;
   Event[] evts;
-  Connector[] cnns;
+  Gate[] gates;
 
   @nonPacked BO[ulong] bos;
 
@@ -48,16 +48,16 @@ class Process {
     return endIds;
   }
 
-  const(BO) opCall(ulong boId) const {
-    if (boId !in bos)
-      throw new Exception("boId " ~ text(boId) ~ " not an element of this process");
-    return bos[boId];
+  const(BO) opCall(ulong boID) const {
+    if (boID !in bos)
+      throw new Exception("boID " ~ text(boID) ~ " not an element of this process");
+    return bos[boID];
   }
 
-  BO opCall(ulong boId) {
-    if (boId !in bos)
-      throw new Exception("boId " ~ text(boId) ~ " not an element of this process");
-    return bos[boId];
+  BO opCall(ulong boID) {
+    if (boID !in bos)
+      throw new Exception("boID " ~ text(boID) ~ " not an element of this process");
+    return bos[boID];
   }
 
   T add(T)(ulong[] deps, T obj) {
@@ -99,12 +99,12 @@ class Process {
         // evt.deps = matches;
         obj.deps = [evt.id];
       }
-    } else static if (is(T == Participant))
-      parts ~= obj;
+    } else static if (is(T == Resource))
+      ress ~= obj;
     else static if (is(T == Event))
       evts ~= obj;
-    else static if (is(T == Connector))
-      cnns ~= obj;
+    else static if (is(T == Gate))
+      gates ~= obj;
     return obj;
   }
 
@@ -137,11 +137,11 @@ class Process {
     with (bp) {
       foreach (f; funcs)
         bos[f.id] = f;
-      foreach (p; parts)
+      foreach (p; ress)
         bos[p.id] = p;
       foreach (e; evts)
         bos[e.id] = e;
-      foreach (c; cnns)
+      foreach (c; gates)
         bos[c.id] = c;
 
       postProcess();
@@ -158,36 +158,36 @@ class Process {
     foreach (bo; bos.byKeyValue()) {
       bo.value.succs = [];
       foreach (obj; bos.byKeyValue()) {
-        if (canFind(obj.value.deps, bo.key) && !obj.value.isPart) {
+        if (canFind(obj.value.deps, bo.key) && !obj.value.isRes) {
           bo.value.succs ~= obj.key;
         }
       }
     }
 
-    // set Function.parts 
+    // set Function.ress 
     foreach (f; funcs) {
       ulong[] ps;
-      foreach (p; parts)
+      foreach (p; ress)
         if (p.deps.canFind(f.id))
           ps ~= p.id;
-      f.parts = ps;
+      f.ress = ps;
     }
 
-    // set Participant.quals
-    foreach (ref p; parts) {
+    // set Resource.quals
+    foreach (ref p; ress) {
       foreach (pd; p.deps) {
         if (!p.quals.canFind(pd))
           p.quals ~= pd;
       }
     }
 
-    // set Connector.probs
-    foreach (ref c; cnns) {
+    // set Gate.probs
+    foreach (ref c; gates) {
       if (c.succs.length < 2)
         continue;
       foreach (cs; c.succs) {
-        if (c.type != Connector.Type.and && !c.probs.canFind!(a => a.boId == cs))
-          c.probs ~= tuple!("boId", "prob")(cs, 1.0);
+        if (c.type != Gate.Type.and && !c.probs.canFind!(a => a.boID == cs))
+          c.probs ~= tuple!("boID", "prob")(cs, 1.0);
       }
 
       // TODO there has to be a better way
@@ -195,7 +195,7 @@ class Process {
       do {
         removed = false;
         foreach (i, cp; c.probs) {
-          if (!c.succs.canFind(cp.boId)) {
+          if (!c.succs.canFind(cp.boID)) {
             c.probs = c.probs.remove(i);
             removed = true;
             break;
@@ -209,35 +209,35 @@ class Process {
     import std.algorithm : minElement, map;
     import std.typecons : Tuple;
 
-    // identify Connector loops
-    foreach (ref c; cnns) {
+    // identify Gate loops
+    foreach (ref c; gates) {
       immutable bool isSplit = c.succs.length > 1;
-      if (!isSplit || c.type != Connector.Type.xor)
+      if (!isSplit || c.type != Gate.Type.xor)
         continue;
 
-      auto tillObjs = listAllObjs(c, typeid(Connector), true);
+      auto tillObjs = listAllObjs(c, typeid(Gate), true);
 
       foreach (i, cs; c.succs) {
         if (tillObjs.canFind(cs)) {
           writeln(c.name ~ " has loop branch " ~ bos[cs].name);
           c.loopsFor ~= cs;
           assert(bos[cs].deps.length > 1, "only support for loop branches without objs in between"); // TODO
-          auto bconn = bos[cs].asConn;
+          auto bconn = bos[cs].asGate;
           bconn.loopsFor ~= c.id;
         }
       }
     }
 
-    // find Connector partners
+    // find Gate partners
     import util;
 
-    cnns.each!(c => c.partner.nullify());
-    foreach (ref c; cnns) {
+    gates.each!(c => c.partner.nullify());
+    foreach (ref c; gates) {
       immutable bool isSplit = c.succs.length > 1;
-      if (!isSplit || c.type == Connector.Type.xor)
+      if (!isSplit || c.type == Gate.Type.xor)
         continue;
       Tuple!(size_t, "index", ulong, "value")[] checkArr;
-      auto allAfter = c.succs.map!(cs => listAllObjs(bos[cs], typeid(Connector), false)).array;
+      auto allAfter = c.succs.map!(cs => listAllObjs(bos[cs], typeid(Gate), false)).array;
       // ulong[][] cmbs;
       // for (size_t i = c.succs.length; i >= 2; i--)
       //   cmbs ~= comb(c.succs, i);
@@ -254,9 +254,9 @@ class Process {
         //   continue;
         // listAllObjs preserves the order of found objects but for setIntersection, we need to sort the input arrays
         // to later restore the original found-order, we enumerate the results 
-        auto branchObjs = allAfter[i].remove!(a => a == c.id || !bos[a].asConn.partner.isNull); // listAllObjs(bos[cs], typeid(Connector), false);
+        auto branchObjs = allAfter[i].remove!(a => a == c.id || !bos[a].asGate.partner.isNull); // listAllObjs(bos[cs], typeid(Gate), false);
         // if (branchObjs.canFind(cs)) {
-        //   bos[cs].asConn.loopsFor ~= cs;
+        //   bos[cs].asGate.loopsFor ~= cs;
         //   continue;
         // }
         afterConnsPerBranch ~= [branchObjs.enumerate.array.sort!"a.value < b.value".array];
@@ -273,8 +273,8 @@ class Process {
       // }
       //}
       // writeln("For ", c.name, ": ", afterConnsPerBranch);
-      // XXX only with xor Connectors you can build non-hierarchical layouts
-      if (checkArr.empty && c.type != Connector.Type.xor) {
+      // XXX only with xor Gates you can build non-hierarchical layouts
+      if (checkArr.empty && c.type != Gate.Type.xor) {
         throw new Exception("Can't find partner for " ~ c.name);
       }
       // assert(!checkArr.empty);
@@ -285,7 +285,7 @@ class Process {
       // checkArr = checkArr.sort!"a.index < b.index".array;
       // sizediff_t i = 0;
       // c.partner = checkArrs[i].value;
-      // while (c.partner == c.id || !bos[c.partner].asConn.partner.isNull) {
+      // while (c.partner == c.id || !bos[c.partner].asGate.partner.isNull) {
       //   if (i + 1 == checkArrs.length) {
       //     writeln("checkArrs: ", checkArrs.map!(kv => kv.value));
       //     throw new Exception("Could not find partner for " ~ c.name);
@@ -296,15 +296,15 @@ class Process {
       writeln("PARTNER FOR " ~ c.name ~ " is C" ~ c.partner.text);
       // if (c.id == c.partner)
       //   throw new Exception(c.name ~ " can't have itself as partner.");
-      // if (!bos[c.partner].asConn.partner.isNull) {
+      // if (!bos[c.partner].asGate.partner.isNull) {
       //   throw new Exception("C" ~ text(c.partner) ~ " has already C" ~ text(
-      //       bos[c.partner].asConn.partner.get) ~ " -- couldn't find partner for " ~ c.name ~ ".");
+      //       bos[c.partner].asGate.partner.get) ~ " -- couldn't find partner for " ~ c.name ~ ".");
       // }
-      bos[c.partner].asConn.partner = c.id;
+      bos[c.partner].asGate.partner = c.id;
 
       // writeln("c.succs=", c.succs, ", checkArr.deps=", bos[checkArr[0]].deps);
       // XXX this happens when there is an additional edge to a join (e.g. part of a loop)
-      // assert(c.succs.length == bos[checkArr[0]].deps.length, "Didn't find the right partner Connector for " ~ c.name);
+      // assert(c.succs.length == bos[checkArr[0]].deps.length, "Didn't find the right partner Gate for " ~ c.name);
     }
 
   }
@@ -360,7 +360,7 @@ private:
         return;
       foreach (d; before ? curr.deps : curr.succs) {
         // to handle Loops in the EPC
-        if (allIDs.canFind(d) || curr.isConn && curr.asConn.loopsFor.canFind(d))
+        if (allIDs.canFind(d) || curr.isGate && curr.asGate.loopsFor.canFind(d))
           continue;
         allIDs ~= d;
 

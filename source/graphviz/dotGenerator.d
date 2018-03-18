@@ -29,10 +29,10 @@ struct DotGeneratorOptions {
   dot ~= "rankdir = \"LR\";\n";
   string dir, undir;
   foreach (bo; bp.bos) {
-    if (!opt.showParts && bo.isPart)
+    if (!opt.showParts && bo.isRes)
       continue;
     foreach (depID; bo.deps) {
-      if (bo.isPart) 
+      if (bo.isRes) 
         fw(bp.bos[depID].name ~ " -> " ~ bo.name ~ " [constraint=true]", &undir);
       else
         fw(bp.bos[depID].name ~ " -> " ~ bo.name, &dir);
@@ -54,7 +54,7 @@ struct DotGeneratorOptions {
                  width = "0.5", height = "0.5", fontsize = 20, style = "filled", fillcolor = "#ffff84:#ffffbd",
                  gradientangle = 270, color = "#a6a855", fontcolor = "#708041", fontname = "sans-serif"];
 `;
-  foreach (c; bp.cnns) {
+  foreach (c; bp.gates) {
     dot ~= c.name ~ " [label=\"" ~ c.symbol ~ "\", weight=1];\n";
   }
   if (opt.showParts) {
@@ -62,7 +62,7 @@ struct DotGeneratorOptions {
                  width = "0.5", fontsize = "14.0", penwidth = 1, style = "filled", fillcolor = "#aaff84:#aaffbd",
                  gradientangle = 270, color = "#77a855", fontcolor = "#708041", fontname = "sans-serif"];
 `;
-    foreach (p; bp.parts) {
+    foreach (p; bp.ress) {
       dot ~= p.name ~ " [weight=0.1];\n";
     }
   }

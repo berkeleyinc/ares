@@ -1,23 +1,23 @@
-module proc.connector;
+module proc.gate;
 
 import proc.businessObject;
 
 import std.typecons;
 import msgpack : nonPacked;
 
-bool isConn(const BO bo) {
-  return typeid(bo) == typeid(Connector);
+bool isGate(const BO bo) {
+  return typeid(bo) == typeid(Gate);
 }
 
-Connector asConn(BO bo) {
-  return cast(Connector) bo;
+Gate asGate(BO bo) {
+  return cast(Gate) bo;
 }
 
-const(Connector) asConn(const BO bo) {
-  return cast(Connector) bo;
+const(Gate) asGate(const BO bo) {
+  return cast(Gate) bo;
 }
 
-class Connector : BO {
+class Gate : BO {
   this(Type type = Type.and) {
     this.type = type;
   }
@@ -31,17 +31,17 @@ class Connector : BO {
   @property string symbol() const {
     string label;
     final switch (type) {
-    case Connector.Type.and:
+    case Gate.Type.and:
       return "∧";
-    case Connector.Type.or:
+    case Gate.Type.or:
       return "∨";
-    case Connector.Type.xor:
+    case Gate.Type.xor:
       return "X";
     }
   }
 
   // probability that a certain branch will be chosen by the simulator
-  Tuple!(ulong, "boId", double, "prob")[] probs;
+  Tuple!(ulong, "boID", double, "prob")[] probs;
 
   @nonPacked Nullable!ulong partner;
   @nonPacked ulong[] loopsFor = [];

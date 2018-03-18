@@ -17,7 +17,7 @@ import proc.sim.simulation;
 import proc.sim.multiple;
 
 import proc.mod.modification;
-import proc.mod.embedMod;
+import proc.mod.moveMod;
 import proc.mod.parallelizeMod;
 import proc.mod.assignMod;
 
@@ -41,9 +41,9 @@ class Modifier {
     ModsOption[] mos;
 
     // origProcTime_ = MultiSimulator.allPathSimulate(proc_);
-    // auto mods = EmbedMod.create(proc_);
+    // auto mods = MoveMod.create(proc_);
     // if (mods.empty) {
-    //   result ~= "No embed-optimizations found";
+    //   result ~= "No move-optimizations found";
     //   return [];
     // }
     // auto nt = MultiSimulator.allPathSimulate(proc_);
@@ -51,7 +51,7 @@ class Modifier {
     // mos ~= ModsOption(np, nt, [mods[0]]);
 
     //if (!findOptimalModifications(mos, &AssignMod.create)) {
-    if (!findOptimalModifications(mos, &ParallelizeMod.create, &EmbedMod.create, &AssignMod.create)) {
+    if (!findOptimalModifications(mos, &ParallelizeMod.create, &MoveMod.create, &AssignMod.create)) {
       result ~= "No optimizations found";
       return [];
     }
@@ -119,7 +119,7 @@ private:
         foreach (createFunc; ffuncs)
           pms ~= createFunc(pt.proc, defSim);
         // pms ~= factory.create();
-        // pms ~= EmbedMod.create(pt.proc);
+        // pms ~= MoveMod.create(pt.proc);
         // pms ~= ParallelizeMod.create(pt.proc);
         // result ~= pms.length.text ~ " pms found";
         if (pms.empty) {

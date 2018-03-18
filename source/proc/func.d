@@ -20,5 +20,5 @@ class Function : BO {
   // bool opt = false; // optional, will only discard as a last matter
   ulong[] dependsOn; // Functions that have to run before
 
-  @nonPacked ulong[] parts; // All Participants that are assigned to this Function
+  @nonPacked ulong[] ress; // All Resources that are assigned to this Function
 }

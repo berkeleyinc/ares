@@ -23,13 +23,13 @@ class ParallelizeMod : Modification {
     auto end = proc(end_.id).asFunc;
 
     const auto fids = [start.id] ~ proc.listAllObjsAfter(start, typeid(Function), end.id.nullable);
-    Connector startConn = new Connector(Connector.Type.and);
-    Connector endConn = new Connector(Connector.Type.and);
+    Gate startConn = new Gate(Gate.Type.and);
+    Gate endConn = new Gate(Gate.Type.and);
 
     // we assume that the fids array is in order: a -> b -> c -> d
     auto f0Event = proc.getEventFromFunc(start);
     if (!f0Event.deps.empty) {
-      auto preObject = proc(f0Event.deps[0]); // can be Connector or Function
+      auto preObject = proc(f0Event.deps[0]); // can be Gate or Function
       startConn.deps = [preObject.id];
     }
     proc.add(startConn.deps, startConn);

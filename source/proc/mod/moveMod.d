@@ -1,4 +1,4 @@
-module proc.mod.embedMod;
+module proc.mod.moveMod;
 
 import proc.mod.modification;
 import proc.process;
@@ -6,7 +6,7 @@ import proc.sim.simulation;
 
 import std.algorithm.iteration;
 
-class EmbedMod : Modification {
+class MoveMod : Modification {
   this(const BO from, const BO to, const BO bwStart, const BO bwEnd) {
     from_ = from;
     to_ = to;
@@ -15,7 +15,7 @@ class EmbedMod : Modification {
   }
 
   override @property string toString() {
-    return "Embed " ~ from_.name ~ " to " ~ to_.name ~ " in between " ~ bwStart_.name ~ " and " ~ bwEnd_.name;
+    return "Move " ~ from_.name ~ " to " ~ to_.name ~ " in between " ~ bwStart_.name ~ " and " ~ bwEnd_.name;
   }
 
   override void apply(Process p) {
@@ -34,7 +34,7 @@ class EmbedMod : Modification {
   }
 
   static Modification[] create(const Process p, in Simulation defSim) {
-    return (new EmbedModFactory(p)).create();
+    return (new MoveModFactory(p)).create();
   }
 
 private:
@@ -54,7 +54,7 @@ import std.conv;
 
 import util : mean;
 
-private class EmbedModFactory {
+private class MoveModFactory {
   this(const Process p) {
     proc_ = p;
   }
@@ -73,9 +73,9 @@ private class EmbedModFactory {
     PathTime[ulong] bs; // time per path, time is an array to handle possible loops
     auto sor = new Simulator(proc_);
     sor.fnOnRunnerSplit = delegate(ulong currTime, ulong cID, ulong firstID) {
-      auto conn = proc_(cID).asConn;
+      auto conn = proc_(cID).asGate;
       // writeln("on runner split cID=", cID, ", firstID=", firstID, ", has partner=", !conn.partner.isNull);
-      if (conn.type != Connector.Type.and || conn.partner.isNull)
+      if (conn.type != Gate.Type.and || conn.partner.isNull)
         return;
 
       if (conn.partner !in bs) {
@@ -90,15 +90,15 @@ private class EmbedModFactory {
     };
     sor.fnOnRunnerJoin = delegate(ulong currTime, ulong cID, ulong lastID) {
       // writeln("on runner join urID=", urID, ", firstID=", firstID, ", avgTime=", bs[firstID][$ - 1].times.mean);
-      if (proc_(cID).asConn.type != Connector.Type.and || cID !in bs)
+      if (proc_(cID).asGate.type != Gate.Type.and || cID !in bs)
         return;
 
       bs[cID].times[lastID] ~= [cast(double)(currTime - bs[cID].startTime)];
       // XXX that's how we can find the right startID for the lastID
       if (lastID !in bs[cID].startByLastID)
         foreach (possStartID; bs[cID].startIDs) {
-          // check if this startID is an element of the path from lastID back to the fork-connector
-          auto pathObjs = proc_.listAllObjsBefore(proc_(lastID), typeid(BO), proc_(cID).asConn.partner);
+          // check if this startID is an element of the path from lastID back to the fork-gate
+          auto pathObjs = proc_.listAllObjsBefore(proc_(lastID), typeid(BO), proc_(cID).asGate.partner);
           if (pathObjs.canFind(possStartID)) {
             bs[cID].startByLastID[lastID] = possStartID;
             break;
@@ -142,8 +142,8 @@ private class EmbedModFactory {
       // writeln("EXITSEX");
       // }
 
-      auto connClose = proc_(cID).asConn;
-      auto connOpen = proc_(connClose.partner).asConn;
+      auto connClose = proc_(cID).asGate;
+      auto connOpen = proc_(connClose.partner).asGate;
       // writeln("conn=", conn.name);
       assert(!connOpen.partner.isNull);
       // XXX conn-partner conn switched
@@ -169,7 +169,7 @@ private class EmbedModFactory {
       // poss = getMovable(true, cID, neighborIDs, memberIDs, durOfMovable) && avTimePerBranch[idxMax].time >= durOfMovable;
       if (poss && avTimePerBranch[idxMax].time >= durOfMovable) {
         writeln("YES! can move ", memberIDs.front, " -> ", memberIDs.back);
-        pms ~= new EmbedMod(proc_(memberIDs.front), proc_(memberIDs.back), last, connClose);
+        pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), last, connClose);
         // bs[cID].times[memberIDs.back] = bs[cID].times[last.id].map!(t => t + durOfMovable).array;
         // bs[cID].times.remove(last.id);
         // pm_[$-1].apply(proc_);
@@ -177,7 +177,7 @@ private class EmbedModFactory {
         // proc_.movePart(proc_(memberIDs.front), proc_(memberIDs.back), last, conn);
       } else if (poss && durOfMovable <= maxTime) {
         writeln("ALTERNATIVE! can move ", memberIDs.front, " -> ", memberIDs.back);
-        pms ~= new EmbedMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
+        pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
       }
 
       foreach (i, boID; connClose.succs) {
@@ -187,7 +187,7 @@ private class EmbedModFactory {
         if (poss) {
           writeln("YES!!! WANT move ", memberIDs.front, " to ", memberIDs.back, " between ",
               connOpen.name, " and ", connClose.name);
-          pms ~= new EmbedMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
+          pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
         }
       }
 
@@ -197,21 +197,21 @@ private class EmbedModFactory {
         if (poss) {
           writeln("YES!!! WANT(2) move ", memberIDs.front, " to ", memberIDs.back, " between ",
               connOpen.name, " and ", connClose.name);
-          pms ~= new EmbedMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
+          pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
         }
       }
 
       poss = getMovable(false, connOpen.id, neighborIDs, memberIDs, durOfMovable);
       if (poss && avTimePerBranch[idxMax].time >= durOfMovable) {
         writeln("YES! can ALSO move ", memberIDs.front, " -> ", memberIDs.back);
-        pms ~= new EmbedMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen,
+        pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen,
             proc_(bs[cID].startByLastID[last.id]));
         // bs[cID].times[memberIDs.back] = bs[cID].times[last.id].map!(t => t + durOfMovable).array;
         // bs[cID].times.remove(last.id);
         // pm_[$-1].apply(proc_);
       } else if (poss && durOfMovable <= maxTime) {
         writeln("ALTERNATIVE! can ALSO move ", memberIDs.front, " -> ", memberIDs.back);
-        pms ~= new EmbedMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
+        pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
       }
       // static int ii = 0;
       // if (ii++ > 20)
@@ -270,13 +270,13 @@ private class EmbedModFactory {
         swap(memberIDs.front, memberIDs.back);
       return true;
     }
-    if (next.isConn && (*pfollow).length > 1 && !next.asConn.partner.isNull) {
-      // if (next.asConn.partner.isNull)
+    if (next.isGate && (*pfollow).length > 1 && !next.asGate.partner.isNull) {
+      // if (next.asGate.partner.isNull)
       //   return false;
-      const Connector from = right ? next.asConn : proc_(next.asConn.partner).asConn, to = !right
-        ? next.asConn : proc_(next.asConn.partner).asConn;
+      const Gate from = right ? next.asGate : proc_(next.asGate.partner).asGate, to = !right
+        ? next.asGate : proc_(next.asGate.partner).asGate;
 
-      // if (next.isConn && next.asConn.type == Connector.Type.xor)
+      // if (next.isGate && next.asGate.type == Gate.Type.xor)
       //   return false;
       writeln("THIS CONN is FINE: ", from.name, " (to ", to.name, ")");
       ulong[] neighborIDs = proc_.listAllObjsAfter(from, typeid(Function), (cast(ulong) to.id).nullable);

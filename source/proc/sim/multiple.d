@@ -49,7 +49,7 @@ class MultiSimulator {
       Simulation sim = defSim.gdup;
       Simulation.SplitOption[] sos;
       foreach (i, bo; p) {
-        if (inp(bo).isConn && inp(bo).succs.length > 1 && inp(bo).asConn.type != Connector.Type.and) {
+        if (inp(bo).isGate && inp(bo).succs.length > 1 && inp(bo).asGate.type != Gate.Type.and) {
           foreach (ref rt; sim.startTimePerRunner)
             sos ~= Simulation.SplitOption(rt.rid, bo, [p[i + 1]]);
         }
@@ -57,8 +57,8 @@ class MultiSimulator {
       sim.fos = sos;
       sims ~= sim;
       // writeln("SIM.sos: ", sim.fos);
-      // writeln(" -> p: ", p, " <--> ", p.filter!(bo => inp(bo).isConn && inp(bo).succs.length > 1 && inp(bo)
-      //     .asConn.type != Connector.Type.and));
+      // writeln(" -> p: ", p, " <--> ", p.filter!(bo => inp(bo).isGate && inp(bo).succs.length > 1 && inp(bo)
+      //     .asGate.type != Gate.Type.and));
     }
 
     ulong[] times;

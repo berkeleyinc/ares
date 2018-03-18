@@ -130,7 +130,7 @@ class Simulator {
   void delegate(ulong currTime, ulong cID, ulong lastID) fnOnRunnerJoin;
   void delegate(ulong currTime, ulong cID, ulong firstID) fnOnRunnerSplit;
   void delegate() fnOnIncTime;
-  void delegate(ulong participantID, ulong currTime, ulong duration) fnOnStartFunction;
+  void delegate(ulong resourceID, ulong currTime, ulong duration) fnOnStartFunction;
 
 private:
   Rebindable!(const Process) proc_;
@@ -153,10 +153,10 @@ private:
 
   void onRunnerSplit(ref int runnerElemId) {
     auto r = runners_[runnerElemId];
-    auto type = r.currBO.asConn.type;
-    immutable bool isAnd = type == Connector.Type.and;
-    immutable bool isXor = type == Connector.Type.xor;
-    immutable bool isOr = type == Connector.Type.or;
+    auto type = r.currBO.asGate.type;
+    immutable bool isAnd = type == Gate.Type.and;
+    immutable bool isXor = type == Gate.Type.xor;
+    immutable bool isOr = type == Gate.Type.or;
 
     Rebindable!(const ulong[]) splits;
     if (isAnd)
@@ -178,7 +178,7 @@ private:
           foundSOIdcs_ ~= foundIdx;
           // assert(savedSplitsForCurrentElem[0] == psim_.fos[idx]);
           // due to the modification "parallelising", some splits from the original Simulation might not point to a successive BO
-          // because they are behind connector(s)
+          // because they are behind gate(s)
           // here we identify the non existant splits and find out their new root BO_ID
           auto fp = psim_.fos[foundIdx];
           ulong[] nonExistantPaths, existantPaths;
@@ -223,12 +223,12 @@ private:
         auto perms = pidcs.map!(a => a.map!(i => r.currBO.succs[i]).array).array;
 
         double[] probs;
-        bool connProbsSet = r.currBO.asConn.probs.any!(p => p.prob > 0);
+        bool connProbsSet = r.currBO.asGate.probs.any!(p => p.prob > 0);
         for (size_t i = 0; i < perms.length; i++) {
           auto perm = perms[i];
-          double total = cast(double) perm.fold!(delegate(t, boId) {
-            if (r.currBO.asConn.probs.canFind!(prob => prob.boId == boId))
-              return t + r.currBO.asConn.probs.find!(prob => prob.boId == boId)[0].prob;
+          double total = cast(double) perm.fold!(delegate(t, boID) {
+            if (r.currBO.asGate.probs.canFind!(prob => prob.boID == boID))
+              return t + r.currBO.asGate.probs.find!(prob => prob.boID == boID)[0].prob;
             else
               return t + (connProbsSet ? 0.0 : 1.0);
           })(0.0);
@@ -282,9 +282,9 @@ private:
 
   void onRunnerJoin(ref int runnerElemId) {
     auto r = runners_[runnerElemId];
-    immutable bool isOr = r.currBO.asConn.type == Connector.Type.or;
-    immutable bool isXor = r.currBO.asConn.type == Connector.Type.xor;
-    immutable bool isAnd = (cast(Connector) r.currBO).type == Connector.Type.and;
+    immutable bool isOr = r.currBO.asGate.type == Gate.Type.or;
+    immutable bool isXor = r.currBO.asGate.type == Gate.Type.xor;
+    immutable bool isAnd = (cast(Gate) r.currBO).type == Gate.Type.and;
     immutable auto runnersAtThisPos = runners_.fold!((a, b) => r.id == b.id && b.currBO.id == r.currBO.id ? a + 1 : a)(
         0);
 

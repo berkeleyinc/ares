@@ -56,15 +56,15 @@ private:
   const Process process_;
   Path[] paths_;
 
-  void findPaths(ulong boId, ref Path path, int subPath = 0, int stopOn = 0) {
-    const BO bo = process_.bos[boId];
-    if (bo.isPart) {
+  void findPaths(ulong boID, ref Path path, int subPath = 0, int stopOn = 0) {
+    const BO bo = process_.bos[boID];
+    if (bo.isRes) {
       return;
     }
 
     // handle loops in EPCs
-    // if (path.allIDs.canFind(boId)) {
-    //   // writeln("boID ", boId, " is already in path: ", path.allIDs);
+    // if (path.allIDs.canFind(boID)) {
+    //   // writeln("boID ", boID, " is already in path: ", path.allIDs);
     //   paths_ ~= path;
     //   return;
     // }
@@ -96,16 +96,16 @@ private:
         paths_ ~= path;
         return;
       }
-    } else if (bo.isConn) {
+    } else if (bo.isGate) {
 
       path.allIDs ~= bo.id;
       bool isSplit = bo.succs.length > 1;
-      bool isAnd = (cast(Connector) bo).type == Connector.Type.and;
+      bool isAnd = (cast(Gate) bo).type == Gate.Type.and;
 
       if (isSplit) {
         Path[] branchPaths;
         foreach (o; bo.succs) {
-          if (bo.asConn.loopsFor.canFind(o)) {
+          if (bo.asGate.loopsFor.canFind(o)) {
             writeln("SKIPPING LOOP");
             continue;
           }

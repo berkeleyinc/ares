@@ -3,18 +3,18 @@ module proc.resource;
 import proc.businessObject;
 
 bool isRes(const BO bo) {
-  return typeid(bo) == typeid(Participant);
+  return typeid(bo) == typeid(Resource);
 }
 
-Participant asRes(BO bo) {
-  return cast(Participant) bo;
+Resource asRes(BO bo) {
+  return cast(Resource) bo;
 }
 
-const(Participant) asRes(const BO bo) {
-  return cast(const(Participant)) bo;
+const(Resource) asRes(const BO bo) {
+  return cast(const(Resource)) bo;
 }
 
-class Participant : BO
+class Resource : BO
 {
     ulong[] quals = [];
 }

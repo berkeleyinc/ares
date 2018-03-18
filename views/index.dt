@@ -38,7 +38,7 @@ html
         #graph
       div.tab-pane.m-3(id="optionsTab", role="tabpanel")
         p
-        button#btnShowParts.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Show Participants
+        button#btnShowParts.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Show Resources
         // button#btnShowQuals.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Show Qualifications
         br
         form#uploadAresForm(method='post', action='/upload', enctype='multipart/form-data')
