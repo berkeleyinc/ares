@@ -1,18 +1,18 @@
 module proc.event;
 
-import proc.businessObject;
+import proc.epcElement;
 
-bool isEvent(const BO bo) {
-  return typeid(bo) == typeid(Event);
+bool isEvent(const EE ee) {
+  return typeid(ee) == typeid(Event);
 }
 
-Event asEvent(BO bo) {
-  return cast(Event) bo;
+Event asEvent(EE ee) {
+  return cast(Event) ee;
 }
 
-const(Event) asEvent(const BO bo) {
-  return cast(const Event) bo;
+const(Event) asEvent(const EE ee) {
+  return cast(const Event) ee;
 }
 
-class Event : BO {
+class Event : EE {
 }

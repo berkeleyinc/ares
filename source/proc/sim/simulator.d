@@ -2,7 +2,7 @@ module proc.sim.simulator;
 
 import proc.sim.simulation;
 import proc.sim.runner;
-import proc.process;
+import proc.businessProcess;
 
 import std.algorithm;
 import std.stdio : writeln;
@@ -17,12 +17,12 @@ import config;
 import util;
 
 class Simulator {
-  this(const Process proc) {
+  this(const BusinessProcess proc) {
     this.proc_ = proc;
     rndGen = Random(unpredictableSeed);
   }
 
-  @property void process(const Process p) {
+  @property void process(const BusinessProcess p) {
     proc_ = p;
   }
 
@@ -41,8 +41,8 @@ class Simulator {
     fillSOs_ = sim.fos.empty;
     foundSOIdcs_ = [];
 
-    const BO startBO = proc_.bos[startID.isNull ? proc_.getStartId() : startID];
-    // writeln("StartObject " ~ startBO.name);
+    const EE startEE = proc_.epcElements[startID.isNull ? proc_.getStartId() : startID];
+    // writeln("StartObject " ~ startEE.name);
 
     size_t[] runnerIdxStarted;
     bool allRunnersStarted;
@@ -87,7 +87,7 @@ class Simulator {
         }
         for (int i = 0; i < sim.startTimePerRunner.length; i++) {
           if (currentTime_ >= sim.startTimePerRunner[i].time && !runnerIdxStarted.canFind(i)) {
-            runners_ ~= new Runner(&print, fnOnStartFunction, sim.startTimePerRunner[i].rid, proc_, queue_, startBO.id, endID);
+            runners_ ~= new Runner(&print, fnOnStartFunction, sim.startTimePerRunner[i].rid, proc_, queue_, startEE.id, endID);
             runnerIdxStarted ~= i;
             // sim.startTimePerRunner = sim.startTimePerRunner.remove(i);
             // i--;
@@ -133,7 +133,7 @@ class Simulator {
   void delegate(ulong resourceID, ulong currTime, ulong duration) fnOnStartFunction;
 
 private:
-  Rebindable!(const Process) proc_;
+  Rebindable!(const BusinessProcess) proc_;
   Runner[] runners_;
   Runner.Queue queue_;
   Simulation* psim_;
@@ -153,49 +153,49 @@ private:
 
   void onRunnerSplit(ref int runnerElemId) {
     auto r = runners_[runnerElemId];
-    auto type = r.currBO.asGate.type;
+    auto type = r.currEE.asGate.type;
     immutable bool isAnd = type == Gate.Type.and;
     immutable bool isXor = type == Gate.Type.xor;
     immutable bool isOr = type == Gate.Type.or;
 
     Rebindable!(const ulong[]) splits;
     if (isAnd)
-      splits = r.currBO.succs;
+      splits = r.currEE.succs;
     else {
 
       if (!fillSOs_) {
-        ptrdiff_t foundIdx = -1; // = psim_.fos.countUntil!((fp, r) => r.id == fp.rid && r.currBO.id == fp.bid)(r);
+        ptrdiff_t foundIdx = -1; // = psim_.fos.countUntil!((fp, r) => r.id == fp.rid && r.currEE.id == fp.bid)(r);
         foreach (i, ref sp; psim_.fos) {
-          if (r.id == sp.rid && r.currBO.id == sp.bid && !foundSOIdcs_.canFind(i)) {
+          if (r.id == sp.rid && r.currEE.id == sp.bid && !foundSOIdcs_.canFind(i)) {
             foundIdx = i;
             break;
           }
         }
-        // auto savedSplitsForCurrentElem = find!(fp => r.id == fp.rid && r.currBO.id == fp.bid)(psim_.fos);
+        // auto savedSplitsForCurrentElem = find!(fp => r.id == fp.rid && r.currEE.id == fp.bid)(psim_.fos);
         if (foundIdx >= 0) {
           // writeln("SOs: ", psim_.fos);
           // prevent usage of this SplitOption from future use during this Simulation
           foundSOIdcs_ ~= foundIdx;
           // assert(savedSplitsForCurrentElem[0] == psim_.fos[idx]);
-          // due to the modification "parallelising", some splits from the original Simulation might not point to a successive BO
+          // due to the modification "parallelising", some splits from the original Simulation might not point to a successive EE
           // because they are behind gate(s)
-          // here we identify the non existant splits and find out their new root BO_ID
+          // here we identify the non existant splits and find out their new root EE_ID
           auto fp = psim_.fos[foundIdx];
           ulong[] nonExistantPaths, existantPaths;
           foreach (fid; fp.splits) {
-            immutable bool exists = any!(a => a == fid)(r.currBO.succs);
+            immutable bool exists = any!(a => a == fid)(r.currEE.succs);
             if (!exists)
               nonExistantPaths ~= fid;
             else
               existantPaths ~= fid;
           }
           nepLoop: for (int i = 0; i < nonExistantPaths.length; i++) {
-            foreach (s; r.currBO.succs) {
-              immutable bool exists = any!(ss => ss == nonExistantPaths[i])(proc_.listAllObjsAfter(proc_.bos[s],
-                  typeid(BO)));
+            foreach (s; r.currEE.succs) {
+              immutable bool exists = any!(ss => ss == nonExistantPaths[i])(proc_.listAllObjsAfter(proc_.epcElements[s],
+                  typeid(EE)));
                // if (!exists)
                //   writeln(r.str ~ " ==> nep_i=", nonExistantPaths[i], ", listAllObjsAfter(", proc_(s)
-               //       .name, ")=", proc_.listAllObjsAfter(proc_(s), typeid(BO)));
+               //       .name, ")=", proc_.listAllObjsAfter(proc_(s), typeid(EE)));
               if (exists) {
                 existantPaths ~= s;
                 nonExistantPaths = nonExistantPaths.remove(i--);
@@ -217,18 +217,18 @@ private:
 
       if (splits.empty) {
         ulong[][] pidcs;
-        auto idcs = iota(0, r.currBO.succs.length).array;
+        auto idcs = iota(0, r.currEE.succs.length).array;
         foreach (i; isXor ? [0UL] : idcs[0 .. $])
           pidcs ~= comb(idcs, i + 1).array.dup;
-        auto perms = pidcs.map!(a => a.map!(i => r.currBO.succs[i]).array).array;
+        auto perms = pidcs.map!(a => a.map!(i => r.currEE.succs[i]).array).array;
 
         double[] probs;
-        bool connProbsSet = r.currBO.asGate.probs.any!(p => p.prob > 0);
+        bool connProbsSet = r.currEE.asGate.probs.any!(p => p.prob > 0);
         for (size_t i = 0; i < perms.length; i++) {
           auto perm = perms[i];
-          double total = cast(double) perm.fold!(delegate(t, boID) {
-            if (r.currBO.asGate.probs.canFind!(prob => prob.boID == boID))
-              return t + r.currBO.asGate.probs.find!(prob => prob.boID == boID)[0].prob;
+          double total = cast(double) perm.fold!(delegate(t, eeID) {
+            if (r.currEE.asGate.probs.canFind!(prob => prob.eeID == eeID))
+              return t + r.currEE.asGate.probs.find!(prob => prob.eeID == eeID)[0].prob;
             else
               return t + (connProbsSet ? 0.0 : 1.0);
           })(0.0);
@@ -236,16 +236,16 @@ private:
           // writeln("perm=", perm, ", total=", total);
         }
 
-        // writeln("succs: ", r.currBO.succs);
+        // writeln("succs: ", r.currEE.succs);
         // writeln("perms: ", perms);
         // writeln("probs: ", probs);
         assert(!perms.empty);
 
         splits = perms[dice(probs)].array.dup;
 
-        // splits = array(randomSample(r.currBO.succs, isXor ? 1 : uniform!"[]"(1, r.currBO.succs.length)));
+        // splits = array(randomSample(r.currEE.succs, isXor ? 1 : uniform!"[]"(1, r.currEE.succs.length)));
         print(r.str ~ ", Chosen splits: " ~ text(splits));
-        psim_.fos ~= [Simulation.SplitOption(r.id, r.currBO.id, splits.dup)];
+        psim_.fos ~= [Simulation.SplitOption(r.id, r.currEE.id, splits.dup)];
       }
     }
 
@@ -264,13 +264,13 @@ private:
     foreach (bid; splits) {
       auto newRunner = addRunner(bid);
       if (fnOnRunnerSplit)
-        fnOnRunnerSplit(r.time.func + r.time.queue, r.currBO.id, bid);
+        fnOnRunnerSplit(r.time.func + r.time.queue, r.currEE.id, bid);
       if (isOr) {
         newRunner.branchData ~= Runner.BranchData(splits.length);
       }
     }
 
-    // succLoop: foreach (su; r.currBO.succs) {
+    // succLoop: foreach (su; r.currEE.succs) {
     //   foreach (sp; splits)
     //     if (sp == su)
     //       continue succLoop;
@@ -282,15 +282,15 @@ private:
 
   void onRunnerJoin(ref int runnerElemId) {
     auto r = runners_[runnerElemId];
-    immutable bool isOr = r.currBO.asGate.type == Gate.Type.or;
-    immutable bool isXor = r.currBO.asGate.type == Gate.Type.xor;
-    immutable bool isAnd = (cast(Gate) r.currBO).type == Gate.Type.and;
-    immutable auto runnersAtThisPos = runners_.fold!((a, b) => r.id == b.id && b.currBO.id == r.currBO.id ? a + 1 : a)(
+    immutable bool isOr = r.currEE.asGate.type == Gate.Type.or;
+    immutable bool isXor = r.currEE.asGate.type == Gate.Type.xor;
+    immutable bool isAnd = (cast(Gate) r.currEE).type == Gate.Type.and;
+    immutable auto runnersAtThisPos = runners_.fold!((a, b) => r.id == b.id && b.currEE.id == r.currEE.id ? a + 1 : a)(
         0);
 
     size_t desiredRunnersCount;
     if (isAnd)
-      desiredRunnersCount = r.currBO.deps.length;
+      desiredRunnersCount = r.currEE.deps.length;
     else if (isXor)
       desiredRunnersCount = 1;
     else { // isOr
@@ -307,9 +307,9 @@ private:
         auto ri = runners_[i];
         if (ri.id != r.id)
           continue;
-        if (ri.currBO.id == r.currBO.id) {
+        if (ri.currEE.id == r.currEE.id) {
           if (fnOnRunnerJoin)
-            fnOnRunnerJoin(ri.time.func + ri.time.queue, r.currBO.id, ri.lastBOID);
+            fnOnRunnerJoin(ri.time.func + ri.time.queue, r.currEE.id, ri.lastEEID);
           if (ri.time.func >= mtime) {
             mr = ri;
             mtime = ri.time.func;
@@ -329,7 +329,7 @@ private:
         mr.branchData = mr.branchData[0 .. $ - 1];
       }
 
-      runners_ ~= new Runner(mr, r.currBO.id);
+      runners_ ~= new Runner(mr, r.currEE.id);
       auto newRunner = runners_[$ - 1];
       newRunner.step();
 

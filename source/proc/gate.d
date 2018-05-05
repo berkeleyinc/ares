@@ -1,23 +1,23 @@
 module proc.gate;
 
-import proc.businessObject;
+import proc.epcElement;
 
 import std.typecons;
 import msgpack : nonPacked;
 
-bool isGate(const BO bo) {
-  return typeid(bo) == typeid(Gate);
+bool isGate(const EE ee) {
+  return typeid(ee) == typeid(Gate);
 }
 
-Gate asGate(BO bo) {
-  return cast(Gate) bo;
+Gate asGate(EE ee) {
+  return cast(Gate) ee;
 }
 
-const(Gate) asGate(const BO bo) {
-  return cast(Gate) bo;
+const(Gate) asGate(const EE ee) {
+  return cast(Gate) ee;
 }
 
-class Gate : BO {
+class Gate : EE {
   this(Type type = Type.and) {
     this.type = type;
   }
@@ -41,7 +41,7 @@ class Gate : BO {
   }
 
   // probability that a certain branch will be chosen by the simulator
-  Tuple!(ulong, "boID", double, "prob")[] probs;
+  Tuple!(ulong, "eeID", double, "prob")[] probs;
 
   @nonPacked Nullable!ulong partner;
   @nonPacked ulong[] loopsFor = [];

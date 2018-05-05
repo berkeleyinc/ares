@@ -1,6 +1,6 @@
 module proc.sim.pathFinder;
 
-import proc.process;
+import proc.businessProcess;
 
 import std.algorithm : sort, map, canFind;
 import std.array : join, array;
@@ -9,7 +9,7 @@ import std.stdio : writeln;
 import std.range : empty;
 
 class PathFinder {
-  this(const Process proc) {
+  this(const BusinessProcess proc) {
     this.process_ = proc;
   }
 
@@ -35,83 +35,83 @@ class PathFinder {
 
   ulong[][] findPaths() {
     with (process_) {
-      const auto bo = bos[getStartId()];
+      const auto ee = epcElements[getStartId()];
       // writeln("Found startObject " ~ bo.name);
       // writeln("succs: " ~ text(bo.succs));
 
       Path path;
-      findPaths(bo.succs[0], path);
+      findPaths(ee.succs[0], path);
 
       // paths_.sort!("a.time > b.time");
       string pstr;
       foreach (p; paths_)
         pstr ~= "\t" ~ text(p) ~ "\n";
 
-      writeln("BO_PATHS (" ~ text(paths_.length) ~ "):\n" ~ pstr);
+      writeln("EE_PATHS (" ~ text(paths_.length) ~ "):\n" ~ pstr);
     }
     return paths_.map!(p => p.allIDs).array;
   }
 
 private:
-  const Process process_;
+  const BusinessProcess process_;
   Path[] paths_;
 
-  void findPaths(ulong boID, ref Path path, int subPath = 0, int stopOn = 0) {
-    const BO bo = process_.bos[boID];
-    if (bo.isRes) {
+  void findPaths(ulong eeID, ref Path path, int subPath = 0, int stopOn = 0) {
+    const EE ee = process_.epcElements[eeID];
+    if (ee.isRes) {
       return;
     }
 
     // handle loops in EPCs
-    // if (path.allIDs.canFind(boID)) {
-    //   // writeln("boID ", boID, " is already in path: ", path.allIDs);
+    // if (path.allIDs.canFind(eeID)) {
+    //   // writeln("eeID ", eeID, " is already in path: ", path.allIDs);
     //   paths_ ~= path;
     //   return;
     // }
 
     // writeln("Next elem id=" ~ bo.name);
     // writeln("succs: " ~ text(bo.succs));
-    if (bo.isFunc) {
+    if (ee.isFunc) {
       // writeln(bo.name ~ ", waiting for " ~ text((cast(Function) bo).dur));
-      path.allIDs ~= bo.id;
-      path.time += (cast(Function) bo).dur;
+      path.allIDs ~= ee.id;
+      path.time += (cast(Function) ee).dur;
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
-      if (!path.allIDs.canFind(bo.succs[0]))
-        findPaths(bo.succs[0], path, subPath, stopOn);
+      if (!path.allIDs.canFind(ee.succs[0]))
+        findPaths(ee.succs[0], path, subPath, stopOn);
       else {
         paths_ ~= path;
         return;
       }
-    } else if (bo.isEvent) {
-      path.allIDs ~= bo.id;
-      if (bo.succs.empty) {
+    } else if (ee.isEvent) {
+      path.allIDs ~= ee.id;
+      if (ee.succs.empty) {
         paths_ ~= path;
         // writeln("reached END Event: " ~ text(bo.id));
         return;
       }
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
-      if (!path.allIDs.canFind(bo.succs[0]))
-        findPaths(bo.succs[0], path, subPath, stopOn);
+      if (!path.allIDs.canFind(ee.succs[0]))
+        findPaths(ee.succs[0], path, subPath, stopOn);
       else {
         paths_ ~= path;
         return;
       }
-    } else if (bo.isGate) {
+    } else if (ee.isGate) {
 
-      path.allIDs ~= bo.id;
-      bool isSplit = bo.succs.length > 1;
-      bool isAnd = (cast(Gate) bo).type == Gate.Type.and;
+      path.allIDs ~= ee.id;
+      bool isSplit = ee.succs.length > 1;
+      bool isAnd = (cast(Gate) ee).type == Gate.Type.and;
 
       if (isSplit) {
         Path[] branchPaths;
-        foreach (o; bo.succs) {
-          if (bo.asGate.loopsFor.canFind(o)) {
+        foreach (o; ee.succs) {
+          if (ee.asGate.loopsFor.canFind(o)) {
             writeln("SKIPPING LOOP");
             continue;
           }
           Path newPath = path;
 
-          // writeln("starting simulation of new path, start=" ~ process_.bos[o].name);
+          // writeln("starting simulation of new path, start=" ~ process_.epcElements[o].name);
           findPaths(o, newPath, subPath + 1, subPath + 1);
           branchPaths ~= newPath;
           // writeln("simulated path: " ~ text(newPath));
@@ -125,19 +125,19 @@ private:
         path = bigPath;
         // writeln(">>> path += bigPath: " ~ text(path));
 
-        const BO* lastBO = &process_.bos[bigPath.allIDs[$ - 1]];
-        if (!lastBO.succs.empty)
-          findPaths(lastBO.succs[0], path, subPath + 1, stopOn);
+        const EE* lastEE = &process_.epcElements[bigPath.allIDs[$ - 1]];
+        if (!lastEE.succs.empty)
+          findPaths(lastEE.succs[0], path, subPath + 1, stopOn);
         if (!isAnd) {
           foreach (p; branchPaths) {
             if (p == bigPath)
               continue;
-            const BO* lastBO2 = &process_.bos[p.allIDs[$ - 1]];
-            if (!lastBO2.succs.empty) {
+            const EE* lastEE2 = &process_.epcElements[p.allIDs[$ - 1]];
+            if (!lastEE2.succs.empty) {
               // prevent stack overflow when processing loops
-              // if (path.allIDs.canFind(lastBO2.succs[0]))
+              // if (path.allIDs.canFind(lastEE2.succs[0]))
               //   continue;
-              findPaths(lastBO2.succs[0], p, subPath + 1, 0);
+              findPaths(lastEE2.succs[0], p, subPath + 1, 0);
             }
           }
         }
@@ -150,7 +150,7 @@ private:
           // if (path.allIDs.canFind(bo.succs[0]))
           //   return;
           // writeln("FOUND DUP!!");
-          findPaths(bo.succs[0], path, subPath - 1, stopOn);
+          findPaths(ee.succs[0], path, subPath - 1, stopOn);
         }
       }
     }

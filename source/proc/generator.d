@@ -1,6 +1,6 @@
 module proc.generator;
 
-import proc.process;
+import proc.businessProcess;
 
 import std.stdio;
 import std.random;
@@ -34,7 +34,7 @@ class Generator {
     uint maxFuncs;
   }
 
-  static Process generate(in Cfg.PerUser cfg) {
+  static BusinessProcess generate(in Cfg.PerUser cfg) {
     Paradigm xorPar = Paradigm(Paradigm.Type.xor);
     Paradigm andPar = Paradigm(Paradigm.Type.and);
     Paradigm orPar = Paradigm(Paradigm.Type.or);
@@ -47,16 +47,16 @@ class Generator {
     const auto branchCountProbs = cfg[Cfg.R.GEN_branchCountProbs].nodeArr!double;
     const auto functionDurationLimits = cfg[Cfg.R.GEN_avgFuncDurs].nodeArr!uint;
 
-    Process bp = new Process;
+    BusinessProcess bp = new BusinessProcess;
 
-    BO addEnd(BO from) {
+    EE addEnd(EE from) {
       auto evt = new Event;
       // evt.label = "END";
       return bp.add([from.id], evt);
     }
 
     rndGen = Random(unpredictableSeed);
-    BO generate(Limits gc, BO from, uint* pDepth, uint* pFuncs, bool insideAnd = false) {
+    EE generate(Limits gc, EE from, uint* pDepth, uint* pFuncs, bool insideAnd = false) {
 
       uint depth = 0, funcs = 0;
       if (pDepth == null || pFuncs == null || from is null) {
@@ -138,7 +138,7 @@ class Generator {
       }
       // if (insideAnd)
       //   endBranchCount = 0;
-      BO startConn = bp.add([from.id], new Gate(type));
+      EE startConn = bp.add([from.id], new Gate(type));
 
       // if (type == Gate.Type.xor) {
       //   foreach (cs; bp.gates) {
@@ -148,14 +148,14 @@ class Generator {
       // }
 
       ulong[] branchIds;
-      BO[] branches;
+      EE[] branches;
       for (int i = 0; i < branchCount; i++) {
         if (i >= 1 && i <= endBranchCount) {
           int canSpend = 0;
           immutable int rest = gc.maxFuncs - *pFuncs;
           if (rest > 1)
             canSpend = uniform(0, rest / 2);
-          BO line = startConn;
+          EE line = startConn;
           if (canSpend > 0) {
             line = generate(Limits(gc.maxDepth, *pFuncs + canSpend), startConn, pDepth, pFuncs,
                 insideAnd || type == Gate.Type.and);
@@ -166,7 +166,7 @@ class Generator {
           branchIds ~= branches[$ - 1].id;
         }
       }
-      BO endConn;
+      EE endConn;
       if (endBranchCount > 0 && branchCount - endBranchCount <= 1) {
         endConn = branches[0];
       } else {
@@ -185,8 +185,8 @@ class Generator {
 
     int maxDepth = cfg[Cfg.R.GEN_maxDepth].as!int;
     int maxFuncs = cfg[Cfg.R.GEN_maxFuncs].as!int;
-    auto bo = generate(Limits(uniform(2, maxDepth), uniform(5, maxFuncs)), null, null, null);
-    addEnd(bo);
+    auto ee= generate(Limits(uniform(2, maxDepth), uniform(5, maxFuncs)), null, null, null);
+    addEnd(ee);
 
     bp.postProcess();
 

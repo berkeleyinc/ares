@@ -17,7 +17,7 @@ import std.range : iota;
 import web.sessions;
 import graphviz.dotGenerator;
 
-import proc.process;
+import proc.businessProcess;
 
 import gen = proc.generator;
 import proc.sim.simulator;
@@ -38,13 +38,13 @@ class WebService {
   }
 
   @noRoute {
-    @property Process process() {
+    @property BusinessProcess process() {
       if (Sessions.get(sessionID_).bps.length <= bpID_)
         throw new Exception("bpID " ~ bpID_.text ~ " not valid.");
       return Sessions.get(sessionID_).bps[bpID_];
     }
 
-    @property process(Process bp) {
+    @property process(BusinessProcess bp) {
       if (bpID_ >= processCount) {
         bpID_ = processCount;
         Sessions.get(sessionID_).bps ~= bp;
@@ -66,7 +66,7 @@ class WebService {
       // Sessions.get(sessionID_).bps = [];
       //process = gen.Generator.generate();
 
-      Process p = new Process;
+      BusinessProcess p = new BusinessProcess;
       auto e0 = p.add([], new Event);
       auto f1 = p.add([e0.id], new Function);
       p.add([f1.id], new Resource);
@@ -134,7 +134,7 @@ class WebService {
   @method(HTTPMethod.GET) @path("/set_object_config")
   void setObjectConfig(HTTPServerRequest req, HTTPServerResponse res, ulong id, Nullable!int did,
       Nullable!int dur, Nullable!int qid, Nullable!double p, Nullable!ulong oid) {
-    auto el = process.bos[id];
+    auto el = process.epcElements[id];
 
     void applyChange(ref ulong[] arr, ulong id) {
       foreach (removeIdx, arrId; arr)
@@ -164,7 +164,7 @@ class WebService {
     } else if (el.isGate) {
       writeln("Changing branch probs of Gate ", id, ", oid=", oid, ", newProb=", p);
       foreach (ref pe; el.asGate.probs)
-        if (pe.boID == oid)
+        if (pe.eeID == oid)
           pe.prob = p;
     }
     res.writeBody("OK", "text/plain");
@@ -172,10 +172,10 @@ class WebService {
 
   void getObjectConfig(HTTPServerRequest req, HTTPServerResponse res, ulong id) {
     // logInfo(__FUNCTION__ ~ " --> id=" ~ text(id) ~ ", sid=" ~ req.session.id);
-    if (!Sessions.exists(req.session.id) || id !in process.bos)
+    if (!Sessions.exists(req.session.id) || id !in process.epcElements)
       return;
 
-    auto el = process.bos[id];
+    auto el = process.epcElements[id];
     JSONValue json;
 
     string className;
@@ -202,9 +202,9 @@ class WebService {
       json["beforeFuncs"] = fs;
     } else if (el.isRes) {
       ulong[] fs;
-      foreach (boID; process.bos.byKey())
-        if (process.bos[boID].isFunc)
-          fs ~= boID;
+      foreach (eeID; process.epcElements.byKey())
+        if (process.epcElements[eeID].isFunc)
+          fs ~= eeID;
       json["allFuncs"] = fs;
     }
 
@@ -219,7 +219,7 @@ class WebService {
   void postUpload(HTTPServerRequest req, HTTPServerResponse res) {
     // File upload here
     auto file = "ares.bin" in req.files;
-    process = Process.load(cast(ubyte[]) read(file.tempPath.toString));
+    process = BusinessProcess.load(cast(ubyte[]) read(file.tempPath.toString));
 
     // dot_ = generateDot(process, dotGenOpts_);
     // getGraph(req, res, "dot");
@@ -266,9 +266,9 @@ class WebService {
   }
 
   @method(HTTPMethod.GET) @path("/res")
-  void restructureProcess(HTTPServerRequest req, HTTPServerResponse res) {
+  void restructureBusinessProcess(HTTPServerRequest req, HTTPServerResponse res) {
     logInfo(__FUNCTION__);
-    // auto newProcess = process.clone();
+    // auto newBusinessProcess = process.clone();
 
     const size_t runnerCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parRunnersPerSim].as!size_t;
     const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenRunnerStarts].as!ulong;
@@ -293,7 +293,7 @@ class WebService {
   }
 
   @method(HTTPMethod.GET) @path("/gen")
-  void generateProcess(HTTPServerRequest req, HTTPServerResponse res) {
+  void generateBusinessProcess(HTTPServerRequest req, HTTPServerResponse res) {
     logInfo(__FUNCTION__);
     bpID_ = 0;
     sessionID_ = req.session.id;
@@ -323,7 +323,7 @@ class WebService {
     ulong[] times;
     times.length = processCount;
 
-    const(Process)[] ps = Sessions.get(req.session.id).bps;
+    const(BusinessProcess)[] ps = Sessions.get(req.session.id).bps;
 
     auto sw = StopWatch(AutoStart.yes);
     foreach (i; 0 .. simCount) {

@@ -1,6 +1,6 @@
 module proc.mod.modifier;
 
-import proc.process;
+import proc.businessProcess;
 
 import std.algorithm;
 import std.stdio : writeln;
@@ -24,12 +24,12 @@ import proc.mod.assignMod;
 import util;
 
 class Modifier {
-  this(const Process p, const Simulation defSim) {
+  this(const BusinessProcess p, const Simulation defSim) {
     proc_ = p;
     defSim_ = defSim;
   }
 
-  Process[] modify(out string resultStr) {
+  BusinessProcess[] modify(out string resultStr) {
 
     string[] result;
     auto sw = StopWatch(AutoStart.yes);
@@ -47,7 +47,7 @@ class Modifier {
     //   return [];
     // }
     // auto nt = MultiSimulator.allPathSimulate(proc_);
-    // Process np = proc_.clone();
+    // BusinessProcess np = proc_.clone();
     // mos ~= ModsOption(np, nt, [mods[0]]);
 
     //if (!findOptimalModifications(mos, &AssignMod.create)) {
@@ -83,10 +83,10 @@ class Modifier {
 private:
   const Simulation defSim_;
 
-  Rebindable!(const Process) proc_;
+  Rebindable!(const BusinessProcess) proc_;
   double origProcTime_ = -1; // BP Simulation.def time from input process
 
-  alias ModsOption = Tuple!(Process, "proc", double, "runtime", Modification[], "mods");
+  alias ModsOption = Tuple!(BusinessProcess, "proc", double, "runtime", Modification[], "mods");
   // returns saved time units
   bool findOptimalModifications(FactoryFuncs...)(out ModsOption[] mos, auto ref FactoryFuncs ffuncs) {
     writeln(__FUNCTION__);
@@ -112,7 +112,7 @@ private:
     ModsOption[] pts = [ModsOption(proc_.clone(), origTime, [])], donePts = [];
     do {
       foreach (pidx, pt; pts) {
-        alias PTM = Tuple!(Process, "proc", double, "runtime", Modification, "mod");
+        alias PTM = Tuple!(BusinessProcess, "proc", double, "runtime", Modification, "mod");
         PTM[] ptms;
         Modification[] pms;
 
@@ -130,7 +130,7 @@ private:
         }
 
         foreach (m; pms) {
-          Process p = pt.proc.clone();
+          BusinessProcess p = pt.proc.clone();
           // writeln("Apply " ~ m.toString);
           m.apply(p);
           sor.process = p;

@@ -1,7 +1,7 @@
 module proc.mod.assignMod;
 
 import proc.mod.modification;
-import proc.process;
+import proc.businessProcess;
 import proc.sim.simulation;
 
 import std.algorithm.iteration;
@@ -17,12 +17,12 @@ class AssignMod : Modification {
     return "Assign P" ~ partID_.text ~ " to funcs: " ~ funcIDs_.text;
   }
 
-  override void apply(Process proc) {
+  override void apply(BusinessProcess proc) {
     proc(partID_).asRes.deps = funcIDs_;
     proc.postProcess();
   }
 
-  static Modification[] create(const Process p, in Simulation defSim) {
+  static Modification[] create(const BusinessProcess p, in Simulation defSim) {
     return (new AssignModFactory(p)).create(defSim);
   }
 
@@ -44,7 +44,7 @@ import util : mean;
 import opmix.dup;
 
 private class AssignModFactory {
-  this(const Process p) {
+  this(const BusinessProcess p) {
     proc_ = p;
   }
 
@@ -53,7 +53,7 @@ private class AssignModFactory {
     Modification[] pms;
 
     Simulation[] sims;
-    Process p = proc_.clone();
+    BusinessProcess p = proc_.clone();
     Simulator sor = new Simulator(p);
 
     ulong[ulong] occByPID;
@@ -94,5 +94,5 @@ private class AssignModFactory {
   }
 
 private:
-  const Process proc_;
+  const BusinessProcess proc_;
 }

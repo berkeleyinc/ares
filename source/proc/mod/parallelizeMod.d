@@ -1,7 +1,7 @@
 module proc.mod.parallelizeMod;
 
 import proc.mod.modification;
-import proc.process;
+import proc.businessProcess;
 import proc.sim.simulation;
 
 import std.range;
@@ -18,7 +18,7 @@ class ParallelizeMod : Modification {
     return "Parallelize from " ~ start_.name ~ " to " ~ end_.name;
   }
 
-  override void apply(Process proc) {
+  override void apply(BusinessProcess proc) {
     auto start = proc(start_.id).asFunc;
     auto end = proc(end_.id).asFunc;
 
@@ -47,7 +47,7 @@ class ParallelizeMod : Modification {
     proc.postProcess();
   }
 
-  static Modification[] create(const Process p, in Simulation defSim) {
+  static Modification[] create(const BusinessProcess p, in Simulation defSim) {
     return (new ParallelizeModFactory(p)).create();
   }
 
@@ -58,7 +58,7 @@ private:
 import std.stdio;
 
 private class ParallelizeModFactory {
-  this(const Process p) {
+  this(const BusinessProcess p) {
     proc_ = p;
   }
 
@@ -161,5 +161,5 @@ private class ParallelizeModFactory {
   }
 
 private:
-  Rebindable!(const Process) proc_;
+  Rebindable!(const BusinessProcess) proc_;
 }

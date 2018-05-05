@@ -1,6 +1,6 @@
 module graphviz.dotGenerator;
 
-import proc.process;
+import proc.businessProcess;
 
 import std.stdio;
 import std.random;
@@ -13,7 +13,7 @@ struct DotGeneratorOptions {
   bool showParts = false;
 }
 
-@trusted string generateDot(const Process bp, const DotGeneratorOptions opt = DotGeneratorOptions()) {
+@trusted string generateDot(const BusinessProcess bp, const DotGeneratorOptions opt = DotGeneratorOptions()) {
   string dot;
   scope (exit) {
     write("/tmp/graph.dot", dot);
@@ -28,14 +28,14 @@ struct DotGeneratorOptions {
   dot ~= "graph[splines = \"spline\", nodesep = \"0.5\"];\n";
   dot ~= "rankdir = \"LR\";\n";
   string dir, undir;
-  foreach (bo; bp.bos) {
-    if (!opt.showParts && bo.isRes)
+  foreach (ee; bp.epcElements) {
+    if (!opt.showParts && ee.isRes)
       continue;
-    foreach (depID; bo.deps) {
-      if (bo.isRes) 
-        fw(bp.bos[depID].name ~ " -> " ~ bo.name ~ " [constraint=true]", &undir);
+    foreach (depID; ee.deps) {
+      if (ee.isRes) 
+        fw(bp.epcElements[depID].name ~ " -> " ~ ee.name ~ " [constraint=true]", &undir);
       else
-        fw(bp.bos[depID].name ~ " -> " ~ bo.name, &dir);
+        fw(bp.epcElements[depID].name ~ " -> " ~ ee.name, &dir);
     }
   }
   dot ~= `node[shape = "box", style = "rounded,filled", fillcolor = "#cedeef:#ffffff", gradientangle = 270, color = "#5a677b",

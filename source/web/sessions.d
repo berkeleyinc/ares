@@ -1,6 +1,6 @@
 module web.sessions;
 
-import proc.process;
+import proc.businessProcess;
 import config;
 
 class Sessions {
@@ -10,7 +10,7 @@ public:
       bps = [];
       cfg = Cfg.get().new Cfg.PerUser;
     }
-    Process[] bps;
+    BusinessProcess[] bps;
     Cfg.PerUser cfg;
   }
 

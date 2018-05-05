@@ -1,11 +1,11 @@
-module proc.businessObject;
+module proc.epcElement;
 
 import std.ascii : isUpper;
 import std.conv : text;
 
 import msgpack : nonPacked;
 
-class BO {
+class EE {
   ulong id;
 
   @property string name() const {

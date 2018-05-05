@@ -1,13 +1,13 @@
 module proc.mod.moveMod;
 
 import proc.mod.modification;
-import proc.process;
+import proc.businessProcess;
 import proc.sim.simulation;
 
 import std.algorithm.iteration;
 
 class MoveMod : Modification {
-  this(const BO from, const BO to, const BO bwStart, const BO bwEnd) {
+  this(const EE from, const EE to, const EE bwStart, const EE bwEnd) {
     from_ = from;
     to_ = to;
     bwStart_ = bwStart;
@@ -18,7 +18,7 @@ class MoveMod : Modification {
     return "Move " ~ from_.name ~ " to " ~ to_.name ~ " in between " ~ bwStart_.name ~ " and " ~ bwEnd_.name;
   }
 
-  override void apply(Process p) {
+  override void apply(BusinessProcess p) {
     auto from = p(from_.id);
     auto to = p(to_.id);
     auto bwStart = p(bwStart_.id);
@@ -33,12 +33,12 @@ class MoveMod : Modification {
     p.movePart(from, to, bwStart, bwEnd);
   }
 
-  static Modification[] create(const Process p, in Simulation defSim) {
+  static Modification[] create(const BusinessProcess p, in Simulation defSim) {
     return (new MoveModFactory(p)).create();
   }
 
 private:
-  const BO from_, to_, bwStart_, bwEnd_;
+  const EE from_, to_, bwStart_, bwEnd_;
 
 }
 
@@ -55,7 +55,7 @@ import std.conv;
 import util : mean;
 
 private class MoveModFactory {
-  this(const Process p) {
+  this(const BusinessProcess p) {
     proc_ = p;
   }
 
@@ -98,7 +98,7 @@ private class MoveModFactory {
       if (lastID !in bs[cID].startByLastID)
         foreach (possStartID; bs[cID].startIDs) {
           // check if this startID is an element of the path from lastID back to the fork-gate
-          auto pathObjs = proc_.listAllObjsBefore(proc_(lastID), typeid(BO), proc_(cID).asGate.partner);
+          auto pathObjs = proc_.listAllObjsBefore(proc_(lastID), typeid(EE), proc_(cID).asGate.partner);
           if (pathObjs.canFind(possStartID)) {
             bs[cID].startByLastID[lastID] = possStartID;
             break;
@@ -115,7 +115,7 @@ private class MoveModFactory {
     //   sor.simulate(sims[i]);
     // }
 
-    Process clone = proc_.clone();
+    BusinessProcess clone = proc_.clone();
     foreach (cID; bs.byKey().array.sort) {
       bool poss; // possible optimization found
 
@@ -180,7 +180,7 @@ private class MoveModFactory {
         pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
       }
 
-      foreach (i, boID; connClose.succs) {
+      foreach (i, eeID; connClose.succs) {
         // TODO als seperator Path bei avTime <= maxTime
         poss = getMovable(true, connClose.id, neighborIDs, memberIDs, durOfMovable, i)
           && avTimePerBranch[idxMax].time >= durOfMovable;
@@ -191,7 +191,7 @@ private class MoveModFactory {
         }
       }
 
-      foreach (i, boID; connOpen.deps) {
+      foreach (i, eeID; connOpen.deps) {
         poss = getMovable(false, connOpen.id, neighborIDs, memberIDs, durOfMovable, i)
           && avTimePerBranch[idxMax].time >= durOfMovable;
         if (poss) {
@@ -228,7 +228,7 @@ private class MoveModFactory {
       out double durOfMovable, size_t pathIdx = 0) {
     import std.algorithm.mutation : swap;
 
-    Rebindable!(const BO) next;
+    Rebindable!(const EE) next;
     const(ulong[])* pfollow;
     if (right) {
       if (proc_(fromID).succs.empty)
@@ -316,5 +316,5 @@ private class MoveModFactory {
   };
 
 private:
-  Rebindable!(const Process) proc_;
+  Rebindable!(const BusinessProcess) proc_;
 }

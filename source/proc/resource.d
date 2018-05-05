@@ -1,20 +1,20 @@
 module proc.resource;
 
-import proc.businessObject;
+import proc.epcElement;
 
-bool isRes(const BO bo) {
-  return typeid(bo) == typeid(Resource);
+bool isRes(const EE ee) {
+  return typeid(ee) == typeid(Resource);
 }
 
-Resource asRes(BO bo) {
-  return cast(Resource) bo;
+Resource asRes(EE ee) {
+  return cast(Resource) ee;
 }
 
-const(Resource) asRes(const BO bo) {
-  return cast(const(Resource)) bo;
+const(Resource) asRes(const EE ee) {
+  return cast(const(Resource)) ee;
 }
 
-class Resource : BO
+class Resource : EE
 {
     ulong[] quals = [];
 }

@@ -1,21 +1,21 @@
 module proc.func;
 
-import proc.businessObject;
+import proc.epcElement;
 import msgpack;
 
-bool isFunc(const BO bo) {
-  return typeid(bo) == typeid(Function);
+bool isFunc(const EE ee) {
+  return typeid(ee) == typeid(Function);
 }
 
-Function asFunc(BO bo) {
-  return cast(Function) bo;
+Function asFunc(EE ee) {
+  return cast(Function) ee;
 }
 
-const(Function) asFunc(const BO bo) {
-  return cast(const Function) bo;
+const(Function) asFunc(const EE ee) {
+  return cast(const Function) ee;
 }
 
-class Function : BO {
+class Function : EE {
   ulong dur = 1; // average duration
   // bool opt = false; // optional, will only discard as a last matter
   ulong[] dependsOn; // Functions that have to run before

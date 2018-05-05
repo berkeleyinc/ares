@@ -1,6 +1,6 @@
-module proc.process;
+module proc.businessProcess;
 
-public import proc.businessObject;
+public import proc.epcElement;
 public import proc.func;
 public import proc.resource;
 public import proc.event;
@@ -16,17 +16,17 @@ import std.typecons : tuple, Nullable;
 import std.range.primitives : empty;
 import msgpack;
 
-class Process {
+class BusinessProcess {
   Function[] funcs;
   Resource[] ress;
   Event[] evts;
   Gate[] gates;
 
-  @nonPacked BO[ulong] bos;
+  @nonPacked EE[ulong] epcElements;
 
   ulong getStartId() const {
     // find START object
-    foreach (o; bos.byValue()) {
+    foreach (o; epcElements.byValue()) {
       // it's the Object that has no dependent objects
       if (o.deps.length == 0)
         return o.id;
@@ -37,10 +37,10 @@ class Process {
   ulong[] getEndIds() const {
     // find END events
     ulong[] endIds = [];
-    fndLoop: foreach (o; bos.byValue()) {
-      foreach (bo; bos.byValue()) {
+    fndLoop: foreach (o; epcElements.byValue()) {
+      foreach (ee; epcElements.byValue()) {
         // only test first dep since Events can't have more than one dep
-        if (bo.deps.length > 0 && bo.deps[0] == o.id)
+        if (ee.deps.length > 0 && ee.deps[0] == o.id)
           continue fndLoop;
       }
       endIds ~= o.id;
@@ -48,22 +48,22 @@ class Process {
     return endIds;
   }
 
-  const(BO) opCall(ulong boID) const {
-    if (boID !in bos)
-      throw new Exception("boID " ~ text(boID) ~ " not an element of this process");
-    return bos[boID];
+  const(EE) opCall(ulong eeID) const {
+    if (eeID !in epcElements)
+      throw new Exception("eeID " ~ text(eeID) ~ " not an element of this process");
+    return epcElements[eeID];
   }
 
-  BO opCall(ulong boID) {
-    if (boID !in bos)
-      throw new Exception("boID " ~ text(boID) ~ " not an element of this process");
-    return bos[boID];
+  EE opCall(ulong eeID) {
+    if (eeID !in epcElements)
+      throw new Exception("eeID " ~ text(eeID) ~ " not an element of this process");
+    return epcElements[eeID];
   }
 
   T add(T)(ulong[] deps, T obj) {
-    BO[] matches;
+    EE[] matches;
     foreach (id; deps) {
-      foreach (b; bos)
+      foreach (b; epcElements)
         if (id == b.id) {
           matches ~= b;
         }
@@ -73,7 +73,7 @@ class Process {
     obj.id = objCounter_++;
     obj.deps = deps;
     // obj.deps = matches;
-    bos[obj.id] = obj;
+    epcElements[obj.id] = obj;
 
     static if (is(T == Function)) {
       funcs ~= obj;
@@ -93,7 +93,7 @@ class Process {
         add([], evt);
         foreach (m; matches) {
           if (typeid(m) == typeid(Function))
-            bos[evt.id] = evt;
+            epcElements[evt.id] = evt;
         }
         evt.deps = deps;
         // evt.deps = matches;
@@ -117,11 +117,11 @@ class Process {
     return pack!true(this).unpack().toJSONValue().toString();
   }
 
-  bool hasSameStructure(const Process p) const {
-    if (bos.length != p.bos.length)
+  bool hasSameStructure(const BusinessProcess p) const {
+    if (epcElements.length != p.epcElements.length)
       return false;
-    foreach (ref bo; bos.byKeyValue()) {
-      if (bo.value.deps != p.bos[bo.key].deps)
+    foreach (ref eePair; epcElements.byKeyValue()) {
+      if (eePair.value.deps != p.epcElements[eePair.key].deps)
         return false;
     }
     return true;
@@ -131,35 +131,35 @@ class Process {
   //   return pack!true(this).unpack().toJSONValue().toPrettyString();
   // }
 
-  static Process load(ubyte[] bytes) {
-    // auto bp = parseJSON(cast(string) bytes).fromJSONValue().as!Process();
-    auto bp = unpack!(Process, false)(bytes);
+  static BusinessProcess load(ubyte[] bytes) {
+    // auto bp = parseJSON(cast(string) bytes).fromJSONValue().as!BusinessProcess();
+    auto bp = unpack!(BusinessProcess, false)(bytes);
     with (bp) {
       foreach (f; funcs)
-        bos[f.id] = f;
+        epcElements[f.id] = f;
       foreach (p; ress)
-        bos[p.id] = p;
+        epcElements[p.id] = p;
       foreach (e; evts)
-        bos[e.id] = e;
+        epcElements[e.id] = e;
       foreach (c; gates)
-        bos[c.id] = c;
+        epcElements[c.id] = c;
 
       postProcess();
     }
     return bp;
   }
 
-  Process clone() const {
-    return Process.load(save());
+  BusinessProcess clone() const {
+    return BusinessProcess.load(save());
   }
 
   void postProcess() {
-    // fill BO.succs
-    foreach (bo; bos.byKeyValue()) {
-      bo.value.succs = [];
-      foreach (obj; bos.byKeyValue()) {
-        if (canFind(obj.value.deps, bo.key) && !obj.value.isRes) {
-          bo.value.succs ~= obj.key;
+    // fill EE.succs
+    foreach (eePair; epcElements.byKeyValue()) {
+      eePair.value.succs = [];
+      foreach (obj; epcElements.byKeyValue()) {
+        if (canFind(obj.value.deps, eePair.key) && !obj.value.isRes) {
+          eePair.value.succs ~= obj.key;
         }
       }
     }
@@ -186,8 +186,8 @@ class Process {
       if (c.succs.length < 2)
         continue;
       foreach (cs; c.succs) {
-        if (c.type != Gate.Type.and && !c.probs.canFind!(a => a.boID == cs))
-          c.probs ~= tuple!("boID", "prob")(cs, 1.0);
+        if (c.type != Gate.Type.and && !c.probs.canFind!(a => a.eeID == cs))
+          c.probs ~= tuple!("eeID", "prob")(cs, 1.0);
       }
 
       // TODO there has to be a better way
@@ -195,7 +195,7 @@ class Process {
       do {
         removed = false;
         foreach (i, cp; c.probs) {
-          if (!c.succs.canFind(cp.boID)) {
+          if (!c.succs.canFind(cp.eeID)) {
             c.probs = c.probs.remove(i);
             removed = true;
             break;
@@ -219,10 +219,10 @@ class Process {
 
       foreach (i, cs; c.succs) {
         if (tillObjs.canFind(cs)) {
-          writeln(c.name ~ " has loop branch " ~ bos[cs].name);
+          writeln(c.name ~ " has loop branch " ~ epcElements[cs].name);
           c.loopsFor ~= cs;
-          assert(bos[cs].deps.length > 1, "only support for loop branches without objs in between"); // TODO
-          auto bconn = bos[cs].asGate;
+          assert(epcElements[cs].deps.length > 1, "only support for loop branches without objs in between"); // TODO
+          auto bconn = epcElements[cs].asGate;
           bconn.loopsFor ~= c.id;
         }
       }
@@ -237,7 +237,7 @@ class Process {
       if (!isSplit || c.type == Gate.Type.xor)
         continue;
       Tuple!(size_t, "index", ulong, "value")[] checkArr;
-      auto allAfter = c.succs.map!(cs => listAllObjs(bos[cs], typeid(Gate), false)).array;
+      auto allAfter = c.succs.map!(cs => listAllObjs(epcElements[cs], typeid(Gate), false)).array;
       // ulong[][] cmbs;
       // for (size_t i = c.succs.length; i >= 2; i--)
       //   cmbs ~= comb(c.succs, i);
@@ -254,9 +254,9 @@ class Process {
         //   continue;
         // listAllObjs preserves the order of found objects but for setIntersection, we need to sort the input arrays
         // to later restore the original found-order, we enumerate the results 
-        auto branchObjs = allAfter[i].remove!(a => a == c.id || !bos[a].asGate.partner.isNull); // listAllObjs(bos[cs], typeid(Gate), false);
+        auto branchObjs = allAfter[i].remove!(a => a == c.id || !epcElements[a].asGate.partner.isNull); // listAllObjs(epcElements[cs], typeid(Gate), false);
         // if (branchObjs.canFind(cs)) {
-        //   bos[cs].asGate.loopsFor ~= cs;
+        //   epcElements[cs].asGate.loopsFor ~= cs;
         //   continue;
         // }
         afterConnsPerBranch ~= [branchObjs.enumerate.array.sort!"a.value < b.value".array];
@@ -285,7 +285,7 @@ class Process {
       // checkArr = checkArr.sort!"a.index < b.index".array;
       // sizediff_t i = 0;
       // c.partner = checkArrs[i].value;
-      // while (c.partner == c.id || !bos[c.partner].asGate.partner.isNull) {
+      // while (c.partner == c.id || !epcElements[c.partner].asGate.partner.isNull) {
       //   if (i + 1 == checkArrs.length) {
       //     writeln("checkArrs: ", checkArrs.map!(kv => kv.value));
       //     throw new Exception("Could not find partner for " ~ c.name);
@@ -296,39 +296,39 @@ class Process {
       writeln("PARTNER FOR " ~ c.name ~ " is C" ~ c.partner.text);
       // if (c.id == c.partner)
       //   throw new Exception(c.name ~ " can't have itself as partner.");
-      // if (!bos[c.partner].asGate.partner.isNull) {
+      // if (!epcElements[c.partner].asGate.partner.isNull) {
       //   throw new Exception("C" ~ text(c.partner) ~ " has already C" ~ text(
-      //       bos[c.partner].asGate.partner.get) ~ " -- couldn't find partner for " ~ c.name ~ ".");
+      //       epcElements[c.partner].asGate.partner.get) ~ " -- couldn't find partner for " ~ c.name ~ ".");
       // }
-      bos[c.partner].asGate.partner = c.id;
+      epcElements[c.partner].asGate.partner = c.id;
 
-      // writeln("c.succs=", c.succs, ", checkArr.deps=", bos[checkArr[0]].deps);
+      // writeln("c.succs=", c.succs, ", checkArr.deps=", epcElements[checkArr[0]].deps);
       // XXX this happens when there is an additional edge to a join (e.g. part of a loop)
-      // assert(c.succs.length == bos[checkArr[0]].deps.length, "Didn't find the right partner Gate for " ~ c.name);
+      // assert(c.succs.length == epcElements[checkArr[0]].deps.length, "Didn't find the right partner Gate for " ~ c.name);
     }
 
   }
 
-  ulong[] listAllFuncsBefore(const BO bo) const {
-    return listAllObjs(bo, typeid(Function), true);
+  ulong[] listAllFuncsBefore(const EE ee) const {
+    return listAllObjs(ee, typeid(Function), true);
   }
 
-  ulong[] listAllEventsAfter(const BO bo) const {
-    return listAllObjs(bo, typeid(Event), false);
+  ulong[] listAllEventsAfter(const EE ee) const {
+    return listAllObjs(ee, typeid(Event), false);
   }
 
-  ulong[] listAllObjsAfter(TI)(const BO bo, TI type, Nullable!ulong tillID = Nullable!ulong()) const {
-    return listAllObjs(bo, type, false, tillID);
+  ulong[] listAllObjsAfter(TI)(const EE ee, TI type, Nullable!ulong tillID = Nullable!ulong()) const {
+    return listAllObjs(ee, type, false, tillID);
   }
 
-  ulong[] listAllObjsBefore(TI)(const BO bo, TI type, Nullable!ulong tillID = Nullable!ulong()) const {
-    return listAllObjs(bo, type, true, tillID);
+  ulong[] listAllObjsBefore(TI)(const EE ee, TI type, Nullable!ulong tillID = Nullable!ulong()) const {
+    return listAllObjs(ee, type, true, tillID);
   }
 
-  void movePart(BO start, BO end, BO bwStart, BO bwEnd) {
+  void movePart(EE start, EE end, EE bwStart, EE bwEnd) {
     import std.algorithm.setops;
 
-    auto endAdapter = bos[end.succs[0]];
+    auto endAdapter = epcElements[end.succs[0]];
     endAdapter.deps = setDifference(endAdapter.deps.sort, [end.id]).array;
     endAdapter.deps ~= start.deps.dup; //[bwStart.id];
 
@@ -341,19 +341,19 @@ class Process {
   }
 
   const(Event) getEventFromFunc(const Function f) const {
-    return bos[find!((id) => bos[id].isEvent)(f.deps)[0]].asEvent;
+    return epcElements[find!((id) => epcElements[id].isEvent)(f.deps)[0]].asEvent;
   }
 
   Event getEventFromFunc(const Function f) {
-    return bos[find!((id) => bos[id].isEvent)(f.deps)[0]].asEvent;
+    return epcElements[find!((id) => epcElements[id].isEvent)(f.deps)[0]].asEvent;
   }
 
 private:
   ulong objCounter_ = 0;
 
   // lists all objects before/after bo. 
-  ulong[] listAllObjs(TI)(const BO bo, TI type, bool before, Nullable!ulong tillID = Nullable!ulong()) const {
-    void getObjs(ref ulong[] allIDs, ref ulong[] fids, const BO curr) {
+  ulong[] listAllObjs(TI)(const EE ee, TI type, bool before, Nullable!ulong tillID = Nullable!ulong()) const {
+    void getObjs(ref ulong[] allIDs, ref ulong[] fids, const EE curr) {
       import std.traits;
 
       if (!tillID.isNull() && curr.id == tillID)
@@ -364,11 +364,11 @@ private:
           continue;
         allIDs ~= d;
 
-        const BO o = bos[d];
+        const EE o = epcElements[d];
         static if (isArray!TI) {
           immutable rightType = type.canFind(typeid(o));
         } else {
-          immutable rightType = type == typeid(BO) || type == typeid(o);
+          immutable rightType = type == typeid(EE) || type == typeid(o);
         }
         if (rightType)
           fids ~= d;
@@ -377,7 +377,7 @@ private:
     }
 
     ulong[] fs, all;
-    getObjs(all, fs, bo);
+    getObjs(all, fs, ee);
     return fs; //fs.sort.uniq.array;
   }
 }
