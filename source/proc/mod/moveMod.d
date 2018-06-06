@@ -70,7 +70,7 @@ private class MoveModFactory {
       ulong[ulong] startByLastID;
     }
 
-    PathTime[ulong] bs; // time per path, time is an array to handle possible loops
+    PathTime[ulong] pathTimesPerFork; // time per path, time is an array to handle possible loops
     auto sor = new Simulator(proc_);
     sor.fnOnRunnerSplit = delegate(ulong currTime, ulong cID, ulong firstID) {
       auto conn = proc_(cID).asGate;
@@ -78,33 +78,33 @@ private class MoveModFactory {
       if (conn.type != Gate.Type.and || conn.partner.isNull)
         return;
 
-      if (conn.partner !in bs) {
-        bs[conn.partner] = PathTime.init;
-        bs[conn.partner].startTime = currTime;
+      if (conn.partner !in pathTimesPerFork) {
+        pathTimesPerFork[conn.partner] = PathTime.init;
+        pathTimesPerFork[conn.partner].startTime = currTime;
       }
-      // if (currTime != bs[conn.partner].startTime) {
-      //   throw new Exception("currTime=" ~ currTime.text ~ ", bs[conn.partner].startTime="
-      //       ~ bs[conn.partner].startTime.text);
+      // if (currTime != pathTimesPerFork[conn.partner].startTime) {
+      //   throw new Exception("currTime=" ~ currTime.text ~ ", pathTimesPerFork[conn.partner].startTime="
+      //       ~ pathTimesPerFork[conn.partner].startTime.text);
       // }
-      bs[conn.partner].startIDs ~= firstID;
+      pathTimesPerFork[conn.partner].startIDs ~= firstID;
     };
     sor.fnOnRunnerJoin = delegate(ulong currTime, ulong cID, ulong lastID) {
-      // writeln("on runner join urID=", urID, ", firstID=", firstID, ", avgTime=", bs[firstID][$ - 1].times.mean);
-      if (proc_(cID).asGate.type != Gate.Type.and || cID !in bs)
+      // writeln("on runner join urID=", urID, ", firstID=", firstID, ", avgTime=", pathTimesPerFork[firstID][$ - 1].times.mean);
+      if (proc_(cID).asGate.type != Gate.Type.and || cID !in pathTimesPerFork)
         return;
 
-      bs[cID].times[lastID] ~= [cast(double)(currTime - bs[cID].startTime)];
+      pathTimesPerFork[cID].times[lastID] ~= [cast(double)(currTime - pathTimesPerFork[cID].startTime)];
       // XXX that's how we can find the right startID for the lastID
-      if (lastID !in bs[cID].startByLastID)
-        foreach (possStartID; bs[cID].startIDs) {
+      if (lastID !in pathTimesPerFork[cID].startByLastID)
+        foreach (possStartID; pathTimesPerFork[cID].startIDs) {
           // check if this startID is an element of the path from lastID back to the fork-gate
           auto pathObjs = proc_.listAllObjsBefore(proc_(lastID), typeid(EE), proc_(cID).asGate.partner);
           if (pathObjs.canFind(possStartID)) {
-            bs[cID].startByLastID[lastID] = possStartID;
+            pathTimesPerFork[cID].startByLastID[lastID] = possStartID;
             break;
           }
         }
-      assert(lastID in bs[cID].startByLastID);
+      assert(lastID in pathTimesPerFork[cID].startByLastID);
     };
 
     Simulation[] sims;
@@ -116,7 +116,7 @@ private class MoveModFactory {
     // }
 
     BusinessProcess clone = proc_.clone();
-    foreach (cID; bs.byKey().array.sort) {
+    foreach (cID; pathTimesPerFork.byKey().array.sort) {
       bool poss; // possible optimization found
 
       // do {
@@ -127,7 +127,7 @@ private class MoveModFactory {
       {
         ulong[] lastIDs;
         double[] times;
-        foreach (lb; bs[cID].times.byKeyValue()) {
+        foreach (lb; pathTimesPerFork[cID].times.byKeyValue()) {
           lastIDs ~= lb.key;
           times ~= lb.value.mean;
         }
@@ -170,8 +170,8 @@ private class MoveModFactory {
       if (poss && avTimePerBranch[idxMax].time >= durOfMovable) {
         writeln("YES! can move ", memberIDs.front, " -> ", memberIDs.back);
         pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), last, connClose);
-        // bs[cID].times[memberIDs.back] = bs[cID].times[last.id].map!(t => t + durOfMovable).array;
-        // bs[cID].times.remove(last.id);
+        // pathTimesPerFork[cID].times[memberIDs.back] = pathTimesPerFork[cID].times[last.id].map!(t => t + durOfMovable).array;
+        // pathTimesPerFork[cID].times.remove(last.id);
         // pm_[$-1].apply(proc_);
 
         // proc_.movePart(proc_(memberIDs.front), proc_(memberIDs.back), last, conn);
@@ -205,9 +205,9 @@ private class MoveModFactory {
       if (poss && avTimePerBranch[idxMax].time >= durOfMovable) {
         writeln("YES! can ALSO move ", memberIDs.front, " -> ", memberIDs.back);
         pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen,
-            proc_(bs[cID].startByLastID[last.id]));
-        // bs[cID].times[memberIDs.back] = bs[cID].times[last.id].map!(t => t + durOfMovable).array;
-        // bs[cID].times.remove(last.id);
+            proc_(pathTimesPerFork[cID].startByLastID[last.id]));
+        // pathTimesPerFork[cID].times[memberIDs.back] = pathTimesPerFork[cID].times[last.id].map!(t => t + durOfMovable).array;
+        // pathTimesPerFork[cID].times.remove(last.id);
         // pm_[$-1].apply(proc_);
       } else if (poss && durOfMovable <= maxTime) {
         writeln("ALTERNATIVE! can ALSO move ", memberIDs.front, " -> ", memberIDs.back);

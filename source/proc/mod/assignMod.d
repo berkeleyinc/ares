@@ -14,7 +14,7 @@ class AssignMod : Modification {
   }
 
   override @property string toString() {
-    return "Assign P" ~ partID_.text ~ " to funcs: " ~ funcIDs_.text;
+    return "Assign R" ~ partID_.text ~ " to funcs: " ~ funcIDs_.text;
   }
 
   override void apply(BusinessProcess proc) {
@@ -56,28 +56,28 @@ private class AssignModFactory {
     BusinessProcess p = proc_.clone();
     Simulator sor = new Simulator(p);
 
-    ulong[ulong] occByPID;
+    ulong[ulong] occByRID;
     double timeTaken;
 
-    sor.fnOnStartFunction = (ulong partID, ulong currTime, ulong dur) {
+    sor.fnOnStartFunction = (ulong resourceID, ulong currTime, ulong dur) {
       // writeln("Start P", partID, ", currTime=", currTime, ", dur=", dur);
-      occByPID[partID] += dur;
+      occByRID[resourceID] += dur;
     };
 
     foreach (ref pa; proc_.ress)
-      occByPID[pa.id] = 0;
+      occByRID[pa.id] = 0;
     timeTaken = MultiSimulator.allPathSimulate(sor, proc_, defSim, sims);
     // timeTaken = generate!(() { auto sim = defSim.gdup; auto t = sor.simulate(sim); sims ~= sim; return t;  })
     //   .takeExactly(700).mean;
-    writeln("time: ", timeTaken, " -- occByPID: ", occByPID, ", ", proc_.ress.length, " ress");
+    writeln("time: ", timeTaken, " -- occByRID: ", occByRID, ", ", proc_.ress.length, " ress");
 
-    auto occs = occByPID.byKeyValue().array.sort!"a.value < b.value";
-    //auto mn = occs[0]; //occByPID.byKeyValue().minElement!"a.value";
-    auto mx = occs[$ - 1]; //occByPID.byKeyValue().maxElement!"a.value";
+    auto occs = occByRID.byKeyValue().array.sort!"a.value < b.value";
+    //auto mn = occs[0]; //occByRID.byKeyValue().minElement!"a.value";
+    auto occMax = occs[$ - 1]; //occByRID.byKeyValue().maxElement!"a.value";
 
     for (int i = 0; i < occs.length - 1; i++) {
       auto mn = occs[i];
-      auto depsWant = (proc_(mn.key).deps ~ proc_(mx.key).deps).dup.sort.uniq.array;
+      auto depsWant = (proc_(mn.key).deps ~ proc_(occMax.key).deps).dup.sort.uniq.array;
       ulong[] depsCan;
       // remove all funcs for which we don't have a qualification
       foreach (qid; proc_(mn.key).asRes.quals) {
@@ -87,7 +87,24 @@ private class AssignModFactory {
       if (depsCan != proc_(mn.key).deps) {
         pms ~= new AssignMod(mn.key, depsCan);
         writeln("maybe ", pms[$ - 1].toString());
+
       }
+    }
+
+    if (proc_(occMax.key).deps.length > 1) {
+      ulong[] must;
+      foreach (depID; proc_(occMax.key).deps) {
+        bool found = false;
+        foreach (ref res; proc_.ress)
+          if (res.id != occMax.key && proc_(res.id).deps.canFind(depID))
+            found = true;
+        if (!found)
+          must ~= depID;
+      }
+      //assert(!must.empty); // TODO must could be empty actually
+            
+      if (!must.empty && must != proc_(occMax.key).deps)
+        pms ~= new AssignMod(occMax.key, must);
     }
 
     return pms;

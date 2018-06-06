@@ -47,7 +47,7 @@ class PathFinder {
       foreach (p; paths_)
         pstr ~= "\t" ~ text(p) ~ "\n";
 
-      writeln("EE_PATHS (" ~ text(paths_.length) ~ "):\n" ~ pstr);
+      //writeln("EE_PATHS (" ~ text(paths_.length) ~ "):\n" ~ pstr);
     }
     return paths_.map!(p => p.allIDs).array;
   }
@@ -76,7 +76,7 @@ private:
       path.allIDs ~= ee.id;
       path.time += (cast(Function) ee).dur;
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
-      if (!path.allIDs.canFind(ee.succs[0]))
+      if (!ee.succs.empty && !path.allIDs.canFind(ee.succs[0]))
         findPaths(ee.succs[0], path, subPath, stopOn);
       else {
         paths_ ~= path;

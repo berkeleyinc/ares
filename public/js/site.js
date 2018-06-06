@@ -117,7 +117,7 @@ function nodePopover(node, name) {
       node_dur.remove();
       // node_opt.remove();
       node_funcs.remove();
-      if (res.class == 'Participant') {
+      if (res.class == 'Resource') {
         node_probs.remove();
         var cq = node_quals.children('td').children('div'), ca = node_assigned.children('td').children('div');
         createPopoverButtonGroupContent(fid, 'qid', res.allFuncs, res.quals, cq);
@@ -125,7 +125,7 @@ function nodePopover(node, name) {
       } else {
         node_quals.remove();
         node_assigned.remove();
-        if (res.class == 'Connector') {
+        if (res.class == 'Gate') {
           var c = node_probs.children('td').children('div');
           if (res.probs)
             for (var i = 0; i < res.probs.length; i++) {
@@ -280,7 +280,7 @@ function onSiteReady() {
   $("#btnClearLog").click(function () { setLog(''); });
 
   // --- options tab ---
-  $("#btnShowParts").click(function () { requestSetOption('dot', 'opts_showParts=true'); });
+  $("#btnShowResources").click(function () { requestSetOption('dot', 'opts_showResources=true'); });
   $("#fileInput").change(function() {
     $.ajax({
       url: '/upload',

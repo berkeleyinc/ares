@@ -115,8 +115,15 @@ class Simulator {
         }
       }
 
-      if (++maxTime > 10000) //  return currentTime_;
+      if (++maxTime > 10000) {//  return currentTime_;
+        // import std.file;
+        // import graphviz.dotGenerator;
+
+        // string dot = generateDot(proc_);
+        // write("/tmp/graph_break.dot", dot);
+
         throw new Exception("Error-Simulator: break condition not met");
+      }
     }
     while (!runners_.empty || !allRunnersStarted);
     // any!"a.currState != 0"(runners_)

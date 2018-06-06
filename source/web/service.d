@@ -18,11 +18,12 @@ import web.sessions;
 import graphviz.dotGenerator;
 
 import proc.businessProcess;
+import proc.businessProcessExamples;
 
-import gen = proc.generator;
+import gen = proc.businessProcessGenerator;
 import proc.sim.simulator;
 import proc.sim.simulation;
-import proc.mod.modifier;
+import proc.mod.businessProcessModifier;
 
 import vibe.vibe;
 import msgpack;
@@ -64,34 +65,12 @@ class WebService {
       logInfo("creating new Session " ~ sessionID_);
       Sessions.create(sessionID_);
       // Sessions.get(sessionID_).bps = [];
-      //process = gen.Generator.generate();
+      process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+      //process = gen.BusinessProcessGenerator.generate();
 
-      BusinessProcess p = new BusinessProcess;
-      auto e0 = p.add([], new Event);
-      auto f1 = p.add([e0.id], new Function);
-      p.add([f1.id], new Resource);
-      auto c3 = p.add([f1.id], new Gate(Gate.Type.xor));
-      auto e4 = p.add([c3.id], new Event);
-      auto e5 = p.add([c3.id], new Event);
-      auto f6 = p.add([e4.id], new Function);
-      auto p7 = p.add([f6.id], new Resource);
-      auto f8 = p.add([e5.id], new Function);
-      p.add([f8.id], new Resource);
-      auto c10 = p.add([f6.id, f8.id], new Gate(Gate.Type.xor));
-      auto e11 = p.add([c10.id], new Event);
-      auto f12 = p.add([e11.id], new Function);
-      p7.asRes.quals ~= f12.id; 
-      p.add([f12.id], new Resource);
-      // auto e13 = p.add([f12.id], new Event);
-      auto c14 = p.add([f12.id], new Gate(Gate.Type.xor));
-      auto e15 = p.add([c14.id], new Event);
-      auto f16 = p.add([e15.id], new Function);
-      p.add([f16.id], new Resource);
-      c10.deps ~= f16.id;
-      auto e18 = p.add([c14.id], new Event);
-      p.postProcess();
+      // auto p = assignResourceExample(false);
 
-      process = p;
+      // process = p;
 
       dot_ = generateDot(process, dotGenOpts_);
     }
@@ -153,7 +132,8 @@ class WebService {
       if (!dur.isNull) {
         el.asFunc.dur = dur;
       }
-    } else if (el.isRes) {
+    }
+    else if (el.isRes) {
       writeln("Changing qual/assignment of Resource ", id, ", QID=", qid, ", DID=", did);
       if (!qid.isNull)
         applyChange(el.asRes.quals, qid);
@@ -161,7 +141,8 @@ class WebService {
         applyChange(el.deps, did);
         process.postProcess();
       }
-    } else if (el.isGate) {
+    }
+    else if (el.isGate) {
       writeln("Changing branch probs of Gate ", id, ", oid=", oid, ", newProb=", p);
       foreach (ref pe; el.asGate.probs)
         if (pe.eeID == oid)
@@ -200,7 +181,8 @@ class WebService {
       const auto fs = process.listAllFuncsBefore(el);
       // writeln("\n\nBWFORE: ", fs);
       json["beforeFuncs"] = fs;
-    } else if (el.isRes) {
+    }
+    else if (el.isRes) {
       ulong[] fs;
       foreach (eeID; process.epcElements.byKey())
         if (process.epcElements[eeID].isFunc)
@@ -248,8 +230,8 @@ class WebService {
       return;
     }
     DotGeneratorOptions dotGenOpts = dotGenOpts_;
-    if (opts.showParts)
-      dotGenOpts.showParts = !dotGenOpts_.showParts;
+    if (opts.showResources)
+      dotGenOpts.showResources = !dotGenOpts_.showResources;
     dotGenOpts_ = dotGenOpts;
 
     res.writeBody("OK", "text/plain");
@@ -275,7 +257,7 @@ class WebService {
     Simulation defSim = Simulation.construct(runnerCount, timeBetween);
 
     JSONValue json;
-    Modifier m = new Modifier(process, defSim);
+    auto m = new BusinessProcessModifier(process, defSim);
 
     string result;
 
@@ -300,7 +282,7 @@ class WebService {
     Sessions.get(req.session.id).bps = [];
     // Sessions.get().bpsBySid[req.session.id].clear();
 
-    process = gen.Generator.generate(Sessions.get(sessionID_).cfg);
+    process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
     dot_ = generateDot(process, dotGenOpts_);
     JSONValue json;
     json["log"] = "Created " ~ text(process.funcs.length) ~ " Functions, " ~ text(

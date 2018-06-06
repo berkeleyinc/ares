@@ -63,6 +63,7 @@ class Cfg {
     GEN_avgFuncDurs, // average function durations (bottom,top limit)
     GEN_maxDepth, // max depth of generated graphs
     GEN_maxFuncs, // max function count of generated graphs
+    // GEN_resourceAssignProbs, // 
     SIM_simsPerBP, // run simulations per BP
     SIM_parRunnersPerSim, // how many runners to start per simulation
     SIM_timeBetweenRunnerStarts, // time between start of runners 

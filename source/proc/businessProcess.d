@@ -154,15 +154,19 @@ class BusinessProcess {
   }
 
   void postProcess() {
-    // fill EE.succs
-    foreach (eePair; epcElements.byKeyValue()) {
-      eePair.value.succs = [];
-      foreach (obj; epcElements.byKeyValue()) {
-        if (canFind(obj.value.deps, eePair.key) && !obj.value.isRes) {
-          eePair.value.succs ~= obj.key;
+
+    void updateSuccs() {
+      // fill EE.succs
+      foreach (ref eePair; epcElements.byKeyValue()) {
+        eePair.value.succs = [];
+        foreach (ref obj; epcElements.byKeyValue()) {
+          if (canFind(obj.value.deps, eePair.key) && !obj.value.isRes) {
+            eePair.value.succs ~= obj.key;
+          }
         }
       }
     }
+    updateSuccs();
 
     // set Function.ress 
     foreach (f; funcs) {
@@ -293,7 +297,7 @@ class BusinessProcess {
       //   c.partner = checkArrs[++i].value; // 
       // }
       c.partner = checkArr.minElement!"a.index < b.index".value;
-      writeln("PARTNER FOR " ~ c.name ~ " is C" ~ c.partner.text);
+      // writeln("PARTNER FOR " ~ c.name ~ " is G" ~ c.partner.text);
       // if (c.id == c.partner)
       //   throw new Exception(c.name ~ " can't have itself as partner.");
       // if (!epcElements[c.partner].asGate.partner.isNull) {
@@ -306,6 +310,81 @@ class BusinessProcess {
       // XXX this happens when there is an additional edge to a join (e.g. part of a loop)
       // assert(c.succs.length == epcElements[checkArr[0]].deps.length, "Didn't find the right partner Gate for " ~ c.name);
     }
+
+    auto removeGateIDs = tuple!(long, long)(-1, -1);
+    do {
+      if (removeGateIDs[0] >= 0) {
+        foreach (removeGateID; [removeGateIDs[0], removeGateIDs[1]].sort!"a > b") {
+          auto id = gates[removeGateID].id;
+          gates = gates.remove!(SwapStrategy.unstable)(removeGateID);
+          writeln("Removing EPC_Element ", id, ", with deps=", epcElements[id].deps);
+          epcElements.remove(id);
+        }
+        removeGateIDs[0] = -1;
+        updateSuccs();
+        // return;
+      }
+
+gateRemover:
+      foreach (leftIDX, ref left; gates) {
+        if (left.type != Gate.Type.and || left.partner.isNull || left.succs.length <= 1)
+          continue;
+
+        foreach (rightID; left.succs) { // TODO also for deps
+          if (!epcElements[rightID].isGate)
+            continue;
+          auto right = epcElements[rightID].asGate;
+          if (right.type != Gate.Type.and || right.partner.isNull || right.succs.length <= 1)
+            continue;
+
+          auto outerPartner = epcElements[left.partner].asGate;
+          auto innerPartner = epcElements[right.partner].asGate;
+
+          assert(innerPartner.succs.length == 1);
+          assert(outerPartner.succs.length == 1);
+
+          // innerPartner.deps = outerPartner.deps.dup;
+
+          if (!outerPartner.deps.canFind(innerPartner.id))
+            continue;
+
+          writeln(left.id, ", left.deps=", left.deps, ", outer.deps=", outerPartner.deps);
+          writeln(outerPartner.id, ", left.succs=", left.succs, ", outer.succs=", outerPartner.succs);
+
+          right.deps = left.deps.dup; // OK
+          foreach (s; left.succs)
+            if (s != rightID)
+              epcElements[s].deps = [rightID].dup; // OK
+          removeGateIDs[0] = leftIDX;
+
+          if (!outerPartner.succs.empty) {
+            auto outerSucc = epcElements[outerPartner.succs[0]];
+            outerSucc.deps = outerSucc.deps.remove!(a => epcElements[a].id == outerPartner.id);
+            outerSucc.deps ~= innerPartner.id;
+          }
+          foreach (depID; outerPartner.deps)
+            if (depID != innerPartner.id)
+              innerPartner.deps ~= depID; // OK
+          
+          foreach (outerIDX, ref gate; gates)
+            if (outerPartner.id == gate.id) {
+              removeGateIDs[1] = outerIDX;
+              break;
+            }
+          updateSuccs();
+          writeln(right.id, ", right.deps=", right.deps, ", inner.deps=", innerPartner.deps);
+          writeln(innerPartner.id, ", right.succs=", right.succs, ", inner.succs=", innerPartner.succs);
+
+          break gateRemover;
+        }
+      }
+    } while (removeGateIDs[0] != -1);
+
+    import std.file;
+    import graphviz.dotGenerator;
+
+    string dot = generateDot(this);
+    write("/tmp/graph2.dot", dot);
 
   }
 

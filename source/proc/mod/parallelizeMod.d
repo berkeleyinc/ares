@@ -69,45 +69,46 @@ private class ParallelizeModFactory {
     immutable onlyOneStep = true;
 
     ulong[][] possiblePar;
-    foreach (i, f; proc_.funcs) {
-      auto preFuncIds = proc_.getEventFromFunc(f).deps.find!((id) => proc_(id).isFunc);
+    foreach (i, epcFunc; proc_.funcs) {
+      auto preFuncIds = proc_.getEventFromFunc(epcFunc).deps.find!((id) => proc_(id).isFunc);
       if (preFuncIds.empty)
         continue;
       assert(preFuncIds.length == 1);
       auto preFuncId = preFuncIds[0];
-      if (f.dependsOn.canFind(preFuncId))
+      // XXX do we need that check? vvv
+      if (epcFunc.dependsOn.canFind(preFuncId))
         continue;
-      bool joined = false;
+      bool didConcatenateFunc = false;
 
-      ppFor: foreach (ref pp; possiblePar) {
-        if (pp[0] == f.id) {
+      ppFor: foreach (ref parFuncList; possiblePar) {
+        if (parFuncList[0] == epcFunc.id) {
           // pp    ,  pre,f
           // [1, 0], [2, 1] 
           // 0 -> 1 -> 2
           // 2 depends on 0
 
-          foreach (check; pp)
+          foreach (check; parFuncList)
             if (proc_(preFuncId).asFunc.dependsOn.canFind(check))
               continue ppFor;
 
-          joined = true;
-          pp = preFuncId ~ pp;
-        } else if (pp[$ - 1] == preFuncId) {
+          didConcatenateFunc = true;
+          parFuncList = preFuncId ~ parFuncList;
+        } else if (parFuncList[$ - 1] == preFuncId) {
           // pp    ,  pre,f
           // [0, 1], [1, 2] 
           // 0 -> 1 -> 2
           // 2 depends on 0
 
-          foreach (check; pp)
-            if (f.dependsOn.canFind(check))
+          foreach (check; parFuncList)
+            if (epcFunc.dependsOn.canFind(check))
               continue ppFor;
 
-          joined = true;
-          pp ~= f.id;
+          didConcatenateFunc = true;
+          parFuncList ~= epcFunc.id;
         }
       }
-      if (!joined)
-        possiblePar ~= [preFuncId, f.id];
+      if (!didConcatenateFunc)
+        possiblePar ~= [preFuncId, epcFunc.id];
     }
 
     writeln(possiblePar);

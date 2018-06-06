@@ -88,7 +88,7 @@ class Runner {
   @property string str() {
     return "R_" ~ text(id) ~ "/" ~ text(uniqueID) ~ "(S:" ~ text(
         currState) ~ ", EE:" ~ currEE.name ~ ", " ~ text(path) ~ ", time[" ~ text(time.func) ~ "," ~ text(
-        time.join) ~ "," ~ text(time.queue) ~ "," ~ text(time.total) ~ "], cont=" ~ text(continueTime) ~ ")";
+        time.join) ~ "," ~ text(time.queue) ~ "," ~ text(time.total) ~ "], cont=" ~ text(continueTime) ~ ")" ~ (currState == State.wait ? ", " ~ text(currWaitState) : "");
   }
 
   enum State {
@@ -147,6 +147,7 @@ class Runner {
 
       bool myTurn = any!findMe(currEE.asFunc.ress);
       if (continueTime_ == 0) {
+        // print("currEE=" ~ currEE.name ~ " continueTime_ == 0");
         // if we came up in the queue, we can start
         if (myTurn) {
           ulong nextPartID = currEE.asFunc.ress.find!findMe()[0];
@@ -164,7 +165,10 @@ class Runner {
           size_t p = currEE.asFunc.ress.find!(p => p in *queue_ && (*queue_)[p].empty)[0]; // there has to be an empty Resources queue
           (*queue_)[p] ~= this;
           (*queue_)[currEE.id] = (*queue_)[currEE.id][1 .. $];
+          // print("filling resource queue:");
+          startFunction(p);
         }
+        // print("currEE=" ~ currEE.name ~ " inQueue");
 
         return State.wait;
       }
@@ -214,6 +218,7 @@ class Runner {
 
   void startFunction(ulong partID) {
     assert(currEE.isFunc);
+    print("start " ~ currEE.name ~ ", with R" ~ text(partID));
     auto dur = currEE.asFunc.dur;
     if (onStartFunction)
       onStartFunction(partID, currentTime_, dur);

@@ -18,6 +18,11 @@ class MultiSimulator {
     return generate!(() => sor.simulate(startID, endID)).takeExactly(count).mean;
   }
 
+  static double multiSimulate(Simulator sor, const BusinessProcess p, ulong count = 500,
+      Nullable!ulong startID = Nullable!ulong.init, Nullable!ulong endID = Nullable!ulong.init) {
+    return generate!(() => sor.simulate(startID, endID)).takeExactly(count).mean;
+  }
+
   static double allPathSimulate(const BusinessProcess inp) {
     Simulation[] sims;
     return allPathSimulate(inp, sims);
@@ -33,6 +38,11 @@ class MultiSimulator {
   }
   static double allPathSimulate(Simulator sor, const BusinessProcess inp, out Simulation[] sims) {
     return allPathSimulate(sor, inp, Simulation.def, sims);
+  }
+
+  static double allPathSimulate(Simulator sor, const BusinessProcess inp, in Simulation defSim) {
+    Simulation[] sims;
+    return allPathSimulate(sor, inp, defSim, sims);
   }
 
   // simulates input BP and returns time units for all path simulations
@@ -65,7 +75,7 @@ class MultiSimulator {
     foreach (ref sim; sims) {
       times ~= sor.simulate(sim);
     }
-    return times.mean;
+    return times[].mean;
   }
 
 }
