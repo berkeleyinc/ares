@@ -14,7 +14,7 @@ class ParallelizeMod : Modification {
     end_ = end;
   }
 
-  override @property string toString() {
+  override @property string toString() const {
     return "Parallelize from " ~ start_.name ~ " to " ~ end_.name;
   }
 

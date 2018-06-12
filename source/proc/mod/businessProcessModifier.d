@@ -109,6 +109,8 @@ private:
     if (origProcTime_ < 0)
       origProcTime_ = origTime;
 
+    auto watch = StopWatch(AutoStart.yes);
+
     ModsOption[] sourceBPMods = [ModsOption(proc_.clone(), origTime, [], 0)], donePts = [];
     while (!sourceBPMods.empty) {
       auto sourceBPMod = sourceBPMods[0];
@@ -142,7 +144,12 @@ private:
         continue;
       }
 
+checkNewModsLoop:
       foreach (m; pms) {
+        foreach (mod; sourceBPMod.mods)
+          if (m.toHash == mod.toHash)
+            continue checkNewModsLoop;
+
         BusinessProcess p = sourceBPMod.proc.clone();
         // writeln("Apply " ~ m.toString);
         m.apply(p);
@@ -187,7 +194,9 @@ private:
       // if (parr.length > 2)
       //   parr.length = 2;
       sourceBPMods ~= parr;
-      sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".take(5).array;
+      auto now = watch.peek();
+      sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".take(now > msecs(2500) ? (now > seconds(5) ? (now > seconds(10) ? 1 : 2) : 5) : 100).array;
+      // sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".take(5).array;
     }
 
     if (donePts.empty)
@@ -196,7 +205,9 @@ private:
     writeln("Found ", donePts.length.text, " BPs, runtimes: ", donePts.map!(a => a.runtime));
     // mos = donePts.sort!("a.runtime < b.runtime").release;
     // mos = donePts.sort!("a.runtime < b.runtime").uniq!((a, b) => a.proc.hasSameStructure(b.proc)).array;
+    // mos = donePts.sort!("a.runtime < b.runtime").array;
     mos = donePts.sort!("a.runtime < b.runtime").uniq!"a.runtime == b.runtime".array;
+    //mos = donePts.sort!("a.runtime < b.runtime").uniq!"a.runtime == b.runtime".array;
     return true;
     // donePts = donePts.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".array;
     // writeln("Found ", donePts.length.text, " BPs, runtimes: ", donePts.map!(a => a.runtime));

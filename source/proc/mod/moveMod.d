@@ -14,7 +14,7 @@ class MoveMod : Modification {
     bwEnd_ = bwEnd;
   }
 
-  override @property string toString() {
+  override @property string toString() const {
     return "Move " ~ from_.name ~ " to " ~ to_.name ~ " in between " ~ bwStart_.name ~ " and " ~ bwEnd_.name;
   }
 

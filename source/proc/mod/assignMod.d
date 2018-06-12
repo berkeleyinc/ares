@@ -13,7 +13,7 @@ class AssignMod : Modification {
     funcIDs_ = funcIDs.dup;
   }
 
-  override @property string toString() {
+  override @property string toString() const {
     return "Assign R" ~ partID_.text ~ " to funcs: " ~ funcIDs_.text;
   }
 
@@ -26,7 +26,7 @@ class AssignMod : Modification {
     return (new AssignModFactory(p)).create(defSim);
   }
 
-private:
+  private:
   ulong partID_;
   ulong[] funcIDs_;
 }
@@ -102,7 +102,7 @@ private class AssignModFactory {
           must ~= depID;
       }
       //assert(!must.empty); // TODO must could be empty actually
-            
+
       if (!must.empty && must != proc_(occMax.key).deps)
         pms ~= new AssignMod(occMax.key, must);
     }
@@ -110,6 +110,6 @@ private class AssignModFactory {
     return pms;
   }
 
-private:
+  private:
   const BusinessProcess proc_;
 }
