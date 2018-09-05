@@ -137,7 +137,7 @@ class Simulator {
   void delegate(ulong currTime, ulong cID, ulong lastID) fnOnRunnerJoin;
   void delegate(ulong currTime, ulong cID, ulong firstID) fnOnRunnerSplit;
   void delegate() fnOnIncTime;
-  void delegate(ulong resourceID, ulong currTime, ulong duration) fnOnStartFunction;
+  void delegate(ulong agentID, ulong currTime, ulong duration) fnOnStartFunction;
 
 private:
   Rebindable!(const BusinessProcess) proc_;

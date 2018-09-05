@@ -10,7 +10,7 @@ import std.file : write;
 import core.stdc.stdlib;
 
 struct DotGeneratorOptions {
-  bool showResources = true;
+  bool showAgents = true;
 }
 
 @trusted string generateDot(const BusinessProcess bp, const DotGeneratorOptions opt = DotGeneratorOptions()) {
@@ -29,13 +29,13 @@ struct DotGeneratorOptions {
   dot ~= "rankdir = \"LR\";\n";
   string dir, undir;
   foreach (ee; bp.epcElements) {
-    if (!opt.showResources && ee.isRes)
+    if (!opt.showAgents && ee.isAgent)
       continue;
     foreach (depID; ee.deps) {
-      if (ee.isRes) 
+      if (ee.isAgent) 
         fw(bp.epcElements[depID].name ~ " -> " ~ ee.name ~ " [constraint=true]", &undir);
       else
-        fw(bp.epcElements[depID].name ~ " -> " ~ ee.name, &dir);
+        fw(bp.epcElements[depID].name ~ " -> " ~ ee.name ~ " [style=\"dashed\"]", &dir);
     }
   }
   // fillcolor = "#cedeef:#ffffff"
@@ -60,13 +60,13 @@ struct DotGeneratorOptions {
   foreach (c; bp.gates) {
     dot ~= c.name ~ " [label=\"" ~ c.symbol ~ "\", weight=1];\n";
   }
-  if (opt.showResources) {
+  if (opt.showAgents) {
     // fillcolor = "#aaff84:#aaffbd"
-    dot ~= `node[shape = "circle",
+    dot ~= `node[shape = "Mcircle",
                  width = "0.5", fontsize = "14.0", penwidth = 1, style = "filled", fillcolor = "#ffff66:#ffffff",
                  gradientangle = 270, color = "#5a677b", fontcolor = "#5a677b", fontname = "sans-serif"];
 `;
-    foreach (p; bp.ress) {
+    foreach (p; bp.agts) {
       dot ~= p.name ~ " [weight=0.1];\n";
     }
   }

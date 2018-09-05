@@ -65,12 +65,14 @@ class WebService {
       logInfo("creating new Session " ~ sessionID_);
       Sessions.create(sessionID_);
       // Sessions.get(sessionID_).bps = [];
-      process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+      //process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
       //process = gen.BusinessProcessGenerator.generate();
 
-      // auto p = assignResourceExample(false);
+      // auto p = assignAgentExample(false);
 
-      // process = p;
+      auto p = dilemmaExample();
+
+      process = p;
 
       dot_ = generateDot(process, dotGenOpts_);
     }
@@ -133,10 +135,10 @@ class WebService {
         el.asFunc.dur = dur;
       }
     }
-    else if (el.isRes) {
-      writeln("Changing qual/assignment of Resource ", id, ", QID=", qid, ", DID=", did);
+    else if (el.isAgent) {
+      writeln("Changing qual/assignment of Agent ", id, ", QID=", qid, ", DID=", did);
       if (!qid.isNull)
-        applyChange(el.asRes.quals, qid);
+        applyChange(el.asAgent.quals, qid);
       else {
         applyChange(el.deps, did);
         process.postProcess();
@@ -168,7 +170,7 @@ class WebService {
       }
 
       string res;
-      foreach (e; [Function.stringof, Event.stringof, Gate.stringof, Resource.stringof])
+      foreach (e; [Function.stringof, Event.stringof, Gate.stringof, Agent.stringof])
         res ~= packWithType(e);
       return res;
     }
@@ -182,7 +184,7 @@ class WebService {
       // writeln("\n\nBWFORE: ", fs);
       json["beforeFuncs"] = fs;
     }
-    else if (el.isRes) {
+    else if (el.isAgent) {
       ulong[] fs;
       foreach (eeID; process.epcElements.byKey())
         if (process.epcElements[eeID].isFunc)
@@ -230,8 +232,8 @@ class WebService {
       return;
     }
     DotGeneratorOptions dotGenOpts = dotGenOpts_;
-    if (opts.showResources)
-      dotGenOpts.showResources = !dotGenOpts_.showResources;
+    if (opts.showAgents)
+      dotGenOpts.showAgents = !dotGenOpts_.showAgents;
     dotGenOpts_ = dotGenOpts;
 
     res.writeBody("OK", "text/plain");
@@ -286,7 +288,7 @@ class WebService {
     dot_ = generateDot(process, dotGenOpts_);
     JSONValue json;
     json["log"] = "Created " ~ text(process.funcs.length) ~ " Functions, " ~ text(
-        process.gates.length) ~ " Gates and " ~ text(process.ress.length) ~ " Resources.";
+        process.gates.length) ~ " Gates and " ~ text(process.agts.length) ~ " Agents.";
     json["dot"] = dot_.dup;
     res.writeBody(json.toString(), "application/json");
   }

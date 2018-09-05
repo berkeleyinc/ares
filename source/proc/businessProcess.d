@@ -2,7 +2,7 @@ module proc.businessProcess;
 
 public import proc.epcElement;
 public import proc.func;
-public import proc.resource;
+public import proc.agent;
 public import proc.event;
 public import proc.gate;
 
@@ -18,7 +18,7 @@ import msgpack;
 
 class BusinessProcess {
   Function[] funcs;
-  Resource[] ress;
+  Agent[] agts;
   Event[] evts;
   Gate[] gates;
 
@@ -99,8 +99,8 @@ class BusinessProcess {
         // evt.deps = matches;
         obj.deps = [evt.id];
       }
-    } else static if (is(T == Resource))
-      ress ~= obj;
+    } else static if (is(T == Agent))
+      agts ~= obj;
     else static if (is(T == Event))
       evts ~= obj;
     else static if (is(T == Gate))
@@ -137,7 +137,7 @@ class BusinessProcess {
     with (bp) {
       foreach (f; funcs)
         epcElements[f.id] = f;
-      foreach (p; ress)
+      foreach (p; agts)
         epcElements[p.id] = p;
       foreach (e; evts)
         epcElements[e.id] = e;
@@ -160,7 +160,7 @@ class BusinessProcess {
       foreach (ref eePair; epcElements.byKeyValue()) {
         eePair.value.succs = [];
         foreach (ref obj; epcElements.byKeyValue()) {
-          if (canFind(obj.value.deps, eePair.key) && !obj.value.isRes) {
+          if (canFind(obj.value.deps, eePair.key) && !obj.value.isAgent) {
             eePair.value.succs ~= obj.key;
           }
         }
@@ -168,17 +168,17 @@ class BusinessProcess {
     }
     updateSuccs();
 
-    // set Function.ress 
+    // set Function.agts 
     foreach (f; funcs) {
       ulong[] ps;
-      foreach (p; ress)
+      foreach (p; agts)
         if (p.deps.canFind(f.id))
           ps ~= p.id;
-      f.ress = ps;
+      f.agts = ps;
     }
 
-    // set Resource.quals
-    foreach (ref p; ress) {
+    // set Agent.quals
+    foreach (ref p; agts) {
       foreach (pd; p.deps) {
         if (!p.quals.canFind(pd))
           p.quals ~= pd;
@@ -225,9 +225,9 @@ class BusinessProcess {
         if (tillObjs.canFind(cs)) {
           writeln(c.name ~ " has loop branch " ~ epcElements[cs].name);
           c.loopsFor ~= cs;
-          assert(epcElements[cs].deps.length > 1, "only support for loop branches without objs in between"); // TODO
-          auto bconn = epcElements[cs].asGate;
-          bconn.loopsFor ~= c.id;
+          // assert(epcElements[cs].deps.length > 1, "only support for loop branches without objs in between"); // TODO
+          // auto bconn = epcElements[cs].asGate;
+          // bconn.loopsFor ~= c.id;
         }
       }
     }
@@ -439,7 +439,7 @@ private:
         return;
       foreach (d; before ? curr.deps : curr.succs) {
         // to handle Loops in the EPC
-        if (allIDs.canFind(d) || curr.isGate && curr.asGate.loopsFor.canFind(d))
+        if (allIDs.canFind(d) /*|| curr.isGate && curr.asGate.loopsFor.canFind(d)*/)
           continue;
         allIDs ~= d;
 

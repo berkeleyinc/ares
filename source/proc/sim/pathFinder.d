@@ -58,7 +58,7 @@ private:
 
   void findPaths(ulong eeID, ref Path path, int subPath = 0, int stopOn = 0) {
     const EE ee = process_.epcElements[eeID];
-    if (ee.isRes) {
+    if (ee.isAgent) {
       return;
     }
 

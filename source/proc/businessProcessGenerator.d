@@ -5,7 +5,7 @@ import proc.businessProcess;
 import std.stdio;
 import std.random;
 import std.conv : text;
-import std.algorithm : map, each;
+import std.algorithm : map, each, max;
 import std.array : array;
 import std.range : empty;
 
@@ -17,7 +17,8 @@ class BusinessProcessGenerator {
       xor,
       and,
       or,
-      seq
+      seq,
+      loop
     }
 
     this(Type t, double p = 0.0) {
@@ -39,9 +40,10 @@ class BusinessProcessGenerator {
     Paradigm andPar = Paradigm(Paradigm.Type.and);
     Paradigm orPar = Paradigm(Paradigm.Type.or);
     Paradigm seqPar = Paradigm(Paradigm.Type.seq);
+    Paradigm loopPar = Paradigm(Paradigm.Type.loop);
 
     const auto probs = cfg[Cfg.R.GEN_branchTypeProbs].nodeArr!double;
-    auto ps = [xorPar, andPar, orPar, seqPar];
+    auto ps = [xorPar, andPar, orPar, seqPar, loopPar];
     foreach (i, ref p; ps)
       p.prob = probs[i];
     const auto branchCountProbs = cfg[Cfg.R.GEN_branchCountProbs].nodeArr!double;
@@ -74,12 +76,10 @@ class BusinessProcessGenerator {
         //  return null;
         //}
         n = 3; // force seq
-      }
-      else if (*pFuncs == 0) {
+      } else if (*pFuncs == 0) {
         n = 3; // force seq
         // TODO
-      }
-      else
+      } else
         n = ps.map!(a => a.prob).dice;
       Paradigm* par = &ps[n];
 
@@ -88,37 +88,48 @@ class BusinessProcessGenerator {
         (*pFuncs)++;
         Function f = bp.add([from.id], new Function());
         f.dur = uniform!"[]"(functionDurationLimits[0], functionDurationLimits[1]);
-        Resource[] ps;
+        Agent[] ps;
 
-        enum ResourceAssignStrategy : size_t {
+        enum AgentAssignStrategy : size_t {
           newOne = 0,
           useExisting = 1,
           moreThanOne = 2
         }
 
-        ResourceAssignStrategy pas = cast(ResourceAssignStrategy) dice(50, bp.ress.empty ? 0 : 25, 10);
+        AgentAssignStrategy pas = cast(AgentAssignStrategy) dice(50, bp.agts.empty ? 0 : 25, 10);
 
         final switch (pas) {
-        case ResourceAssignStrategy.newOne:
-          ps ~= bp.add([f.id], new Resource());
+        case AgentAssignStrategy.newOne:
+          ps ~= bp.add([f.id], new Agent());
           break;
-        case ResourceAssignStrategy.useExisting:
-          ps ~= bp.ress[uniform(0, bp.ress.length)];
+        case AgentAssignStrategy.useExisting:
+          ps ~= bp.agts[uniform(0, bp.agts.length)];
           ps[$ - 1].deps ~= [f.id];
           break;
-        case ResourceAssignStrategy.moreThanOne:
+        case AgentAssignStrategy.moreThanOne:
           foreach (i; 0 .. uniform(2, 3))
-            ps ~= bp.add([f.id], new Resource());
+            ps ~= bp.add([f.id], new Agent());
           break;
         }
-        // random Qualifications for each Resource
+        // random Qualifications for each Agent
         // we don't care if p.quals will be empty because during postProcess(), this is fixed
         ps.each!(p => p.quals = bp.funcs.randomSample(uniform!"[]"(0, bp.funcs.length / 2)).map!(a => a.id).array);
         if (*pFuncs >= gc.maxFuncs || *pDepth >= gc.maxDepth) {
           return f;
-        }
-        else
+        } else
           return generate(gc, f, pDepth, pFuncs, insideAnd);
+      }
+
+      if (par.type == Paradigm.Type.loop) {
+        if (typeid(from) == typeid(Gate) && from.asGate.type == Gate.Type.xor) {
+          return generate(gc, from, pDepth, pFuncs, insideAnd);
+        }
+        EE startConn = bp.add([from.id], new Gate(Gate.Type.xor));
+        // (*pDepth)++;
+        EE line = generate(gc, startConn, pDepth, pFuncs, insideAnd);
+        startConn.deps ~= [line.id];
+        // (*pDepth)--;
+        return startConn;
       }
 
       (*pDepth)++;
@@ -164,8 +175,7 @@ class BusinessProcessGenerator {
                 insideAnd || type == Gate.Type.and);
           }
           addEnd(line);
-        }
-        else {
+        } else {
           branches ~= generate(gc, startConn, pDepth, pFuncs, insideAnd);
           branchIds ~= branches[$ - 1].id;
         }
@@ -173,8 +183,7 @@ class BusinessProcessGenerator {
       EE endConn;
       if (endBranchCount > 0 && branchCount - endBranchCount <= 1) {
         endConn = branches[0];
-      }
-      else {
+      } else {
         endConn = bp.add(branchIds, new Gate(type));
         // writeln("adding ENDConn " ~ endConn.name ~ "(" ~ (cast(Gate) endConn)
         //     .symbol ~ "), branchCount: " ~ text(branchCount) ~ ", endBranchCount: " ~ text(endBranchCount));
@@ -183,8 +192,7 @@ class BusinessProcessGenerator {
 
       if (*pFuncs >= gc.maxFuncs || *pDepth >= gc.maxDepth) {
         return endConn;
-      }
-      else {
+      } else {
         return generate(gc, endConn, pDepth, pFuncs, insideAnd);
       }
     }

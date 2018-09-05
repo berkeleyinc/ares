@@ -8,17 +8,17 @@ import std.algorithm.iteration;
 
 class AssignMod : Modification {
   // part will be assigned to each of funcs
-  this(ulong partID, ulong[] funcIDs) {
-    partID_ = partID;
+  this(ulong agentID, ulong[] funcIDs) {
+    agentID_ = agentID;
     funcIDs_ = funcIDs.dup;
   }
 
   override @property string toString() const {
-    return "Assign R" ~ partID_.text ~ " to funcs: " ~ funcIDs_.text;
+    return "Assign A" ~ agentID_.text ~ " to funcs: " ~ funcIDs_.text;
   }
 
   override void apply(BusinessProcess proc) {
-    proc(partID_).asRes.deps = funcIDs_;
+    proc(agentID_).asAgent.deps = funcIDs_;
     proc.postProcess();
   }
 
@@ -27,7 +27,7 @@ class AssignMod : Modification {
   }
 
   private:
-  ulong partID_;
+  ulong agentID_;
   ulong[] funcIDs_;
 }
 
@@ -56,31 +56,31 @@ private class AssignModFactory {
     BusinessProcess p = proc_.clone();
     Simulator sor = new Simulator(p);
 
-    ulong[ulong] occByRID;
+    ulong[ulong] durByAID;
     double timeTaken;
 
-    sor.fnOnStartFunction = (ulong resourceID, ulong currTime, ulong dur) {
-      // writeln("Start P", partID, ", currTime=", currTime, ", dur=", dur);
-      occByRID[resourceID] += dur;
+    sor.fnOnStartFunction = (ulong agentID, ulong currTime, ulong dur) {
+      // writeln("Start P", agentID, ", currTime=", currTime, ", dur=", dur);
+      durByAID[agentID] += dur;
     };
 
-    foreach (ref pa; proc_.ress)
-      occByRID[pa.id] = 0;
+    foreach (ref pa; proc_.agts)
+      durByAID[pa.id] = 0;
     timeTaken = MultiSimulator.allPathSimulate(sor, proc_, defSim, sims);
     // timeTaken = generate!(() { auto sim = defSim.gdup; auto t = sor.simulate(sim); sims ~= sim; return t;  })
     //   .takeExactly(700).mean;
-    writeln("time: ", timeTaken, " -- occByRID: ", occByRID, ", ", proc_.ress.length, " ress");
+    writeln("time: ", timeTaken, " -- durByAID: ", durByAID, ", ", proc_.agts.length, " agts");
 
-    auto occs = occByRID.byKeyValue().array.sort!"a.value < b.value";
-    //auto mn = occs[0]; //occByRID.byKeyValue().minElement!"a.value";
-    auto occMax = occs[$ - 1]; //occByRID.byKeyValue().maxElement!"a.value";
+    auto occs = durByAID.byKeyValue().array.sort!"a.value < b.value";
+    //auto mn = occs[0]; //durByAID.byKeyValue().minElement!"a.value";
+    auto occMax = occs[$ - 1]; //durByAID.byKeyValue().maxElement!"a.value";
 
     for (int i = 0; i < occs.length - 1; i++) {
       auto mn = occs[i];
       auto depsWant = (proc_(mn.key).deps ~ proc_(occMax.key).deps).dup.sort.uniq.array;
       ulong[] depsCan;
       // remove all funcs for which we don't have a qualification
-      foreach (qid; proc_(mn.key).asRes.quals) {
+      foreach (qid; proc_(mn.key).asAgent.quals) {
         if (depsWant.canFind(qid))
           depsCan ~= qid;
       }
@@ -95,7 +95,7 @@ private class AssignModFactory {
       ulong[] must;
       foreach (depID; proc_(occMax.key).deps) {
         bool found = false;
-        foreach (ref res; proc_.ress)
+        foreach (ref res; proc_.agts)
           if (res.id != occMax.key && proc_(res.id).deps.canFind(depID))
             found = true;
         if (!found)

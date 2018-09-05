@@ -38,7 +38,7 @@ html
         #graph
       div.tab-pane.m-3(id="optionsTab", role="tabpanel")
         p
-        button#btnShowResources.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Toggle Resources
+        button#btnShowAgents.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Toggle Agents
         // button#btnShowQuals.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Show Qualifications
         br
         form#uploadAresForm(method='post', action='/upload', enctype='multipart/form-data')
@@ -60,11 +60,12 @@ html
               input#inpFD0.col-1.form-control.form-control-sm(type="number", value="", placeholder="bot")
               input#inpFD1.col-1.form-control.form-control-sm(type="number", value="", placeholder="top")
             div.form-row
-              label.col xor,and,or,seq probs [in %]
+              label.col xor,and,or,seq,loop probs [in %]
               input#inpP0.col-1.form-control.form-control-sm(type="number", value="", placeholder="xor")
               input#inpP1.col-1.form-control.form-control-sm(type="number", value="", placeholder="and")
               input#inpP2.col-1.form-control.form-control-sm(type="number", value="", placeholder="or")
               input#inpP3.col-1.form-control.form-control-sm(type="number", value="", placeholder="seq")
+              input#inpP4.col-1.form-control.form-control-sm(type="number", value="", placeholder="loop")
             div.form-row
               label.col branch count probs (2,3,4,5 branches) [in %]
               input#inpBC0.col-1.form-control.form-control-sm(type="number", value="", placeholder="2 b")

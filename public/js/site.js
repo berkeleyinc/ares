@@ -117,7 +117,7 @@ function nodePopover(node, name) {
       node_dur.remove();
       // node_opt.remove();
       node_funcs.remove();
-      if (res.class == 'Resource') {
+      if (res.class == 'Agent') {
         node_probs.remove();
         var cq = node_quals.children('td').children('div'), ca = node_assigned.children('td').children('div');
         createPopoverButtonGroupContent(fid, 'qid', res.allFuncs, res.quals, cq);
@@ -280,7 +280,7 @@ function onSiteReady() {
   $("#btnClearLog").click(function () { setLog(''); });
 
   // --- options tab ---
-  $("#btnShowResources").click(function () { requestSetOption('dot', 'opts_showResources=true'); });
+  $("#btnShowAgents").click(function () { requestSetOption('dot', 'opts_showAgents=true'); });
   $("#fileInput").change(function() {
     $.ajax({
       url: '/upload',

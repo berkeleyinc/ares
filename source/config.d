@@ -58,12 +58,12 @@ class Cfg {
 
   // Runtime config entry
   enum R {
-    GEN_branchTypeProbs, // xor,and,or,seq probs (in %)
+    GEN_branchTypeProbs, // xor,and,or,seq,loop probs (in %)
     GEN_branchCountProbs, // branch-count probs
     GEN_avgFuncDurs, // average function durations (bottom,top limit)
     GEN_maxDepth, // max depth of generated graphs
     GEN_maxFuncs, // max function count of generated graphs
-    // GEN_resourceAssignProbs, // 
+    // GEN_agentAssignProbs, // 
     SIM_simsPerBP, // run simulations per BP
     SIM_parRunnersPerSim, // how many runners to start per simulation
     SIM_timeBetweenRunnerStarts, // time between start of runners 
@@ -147,7 +147,7 @@ private:
   static JSONValue def(R ce) {
     final switch (ce) {
     case R.GEN_branchTypeProbs:
-      return JSONValue([20.0, 8.0, 8.0, 60.0]);
+      return JSONValue([20.0, 8.0, 8.0, 60.0, 15.0]);
     case R.GEN_branchCountProbs:
       return JSONValue([64.0, 25.0, 10.0, 3.0]);
     case R.GEN_avgFuncDurs:

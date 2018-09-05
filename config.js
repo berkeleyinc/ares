@@ -19,7 +19,8 @@
             20,
             8,
             8,
-            60
+            60,
+            15
         ],
         "GEN_maxDepth": 7,
         "GEN_maxFuncs": 13,

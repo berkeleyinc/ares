@@ -36,7 +36,7 @@ class Gate : EE {
     case Gate.Type.or:
       return "∨";
     case Gate.Type.xor:
-      return "X";
+      return "⊻";
     }
   }
 
