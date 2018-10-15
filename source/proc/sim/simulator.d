@@ -1,7 +1,7 @@
 module proc.sim.simulator;
 
 import proc.sim.simulation;
-import proc.sim.runner;
+import proc.sim.token;
 import proc.businessProcess;
 
 import std.algorithm;
@@ -35,7 +35,7 @@ class Simulator {
       Nullable!ulong endID = Nullable!ulong.init) {
     int maxTime = 0;
     currentTime_ = 0;
-    runners_ = [];
+    tokens_ = [];
     queue_.clear;
     psim_ = &sim;
     fillSOs_ = sim.fos.empty;
@@ -44,19 +44,19 @@ class Simulator {
     const EE startEE = proc_.epcElements[startID.isNull ? proc_.getStartId() : startID];
     // writeln("StartObject " ~ startEE.name);
 
-    size_t[] runnerIdxStarted;
-    bool allRunnersStarted;
+    size_t[] tokenIdxStarted;
+    bool allTokensStarted;
     do {
-      allRunnersStarted = runnerIdxStarted.length == sim.startTimePerRunner.length;
-      if (all!(r => r.currState == Runner.State.wait || r.currState == Runner.State.join)(runners_)) {
-        if (!runners_.empty) {
+      allTokensStarted = tokenIdxStarted.length == sim.startTimePerToken.length;
+      if (all!(r => r.currState == Token.State.wait || r.currState == Token.State.join)(tokens_)) {
+        if (!tokens_.empty) {
           print("TIME STEP: now=" ~ text(currentTime_));
 
           ulong incStep = 1;
-          if (allRunnersStarted) { // TODO this should also work when not all runners are started
+          if (allTokensStarted) { // TODO this should also work when not all tokens are started
 
             ulong minContinueDiff = 0;
-            foreach (r; runners_) {
+            foreach (r; tokens_) {
               // writeln("r.cont=",r.continueTime);
               if (r.continueTime != 0 && r.continueTime < minContinueDiff || minContinueDiff == 0)
                 minContinueDiff = r.continueTime;
@@ -72,11 +72,11 @@ class Simulator {
             // writeln("minContinueDiff=", minContinueDiff);
             // incStep = 1;
 
-            foreach (r; runners_) {
+            foreach (r; tokens_) {
               r.incTime(incStep);
               print(" " ~ r.str);
             }
-            if (runners_.length == 1) {
+            if (tokens_.length == 1) {
               print(text(queue_));
             }
           }
@@ -85,32 +85,32 @@ class Simulator {
             fnOnIncTime();
           currentTime_ += incStep;
         }
-        for (int i = 0; i < sim.startTimePerRunner.length; i++) {
-          if (currentTime_ >= sim.startTimePerRunner[i].time && !runnerIdxStarted.canFind(i)) {
-            runners_ ~= new Runner(&print, fnOnStartFunction, sim.startTimePerRunner[i].rid, proc_, queue_, startEE.id, endID);
-            runnerIdxStarted ~= i;
-            // sim.startTimePerRunner = sim.startTimePerRunner.remove(i);
+        for (int i = 0; i < sim.startTimePerToken.length; i++) {
+          if (currentTime_ >= sim.startTimePerToken[i].time && !tokenIdxStarted.canFind(i)) {
+            tokens_ ~= new Token(&print, fnOnStartFunction, sim.startTimePerToken[i].tid, proc_, queue_, startEE.id, endID);
+            tokenIdxStarted ~= i;
+            // sim.startTimePerToken = sim.startTimePerToken.remove(i);
             // i--;
           }
         }
       }
 
-      for (int i = 0; i < runners_.length; i++) {
-        auto r = runners_[i];
+      for (int i = 0; i < tokens_.length; i++) {
+        auto r = tokens_[i];
         final switch (r.poll(currentTime_)) {
-        case Runner.State.end:
-          onRunnerEnd(i);
+        case Token.State.end:
+          onTokenEnd(i);
           break;
-        case Runner.State.wait:
+        case Token.State.wait:
           break;
-        case Runner.State.split:
-          onRunnerSplit(i);
+        case Token.State.split:
+          onTokenSplit(i);
           break;
-        case Runner.State.join:
-          onRunnerJoin(i);
+        case Token.State.join:
+          onTokenJoin(i);
           break;
-        case Runner.State.next:
-        case Runner.State.none:
+        case Token.State.next:
+        case Token.State.none:
           assert(0, "State.none/next shouldn't appear here");
         }
       }
@@ -125,24 +125,24 @@ class Simulator {
         throw new Exception("Error-Simulator: break condition not met");
       }
     }
-    while (!runners_.empty || !allRunnersStarted);
-    // any!"a.currState != 0"(runners_)
+    while (!tokens_.empty || !allTokensStarted);
+    // any!"a.currState != 0"(tokens_)
 
-    // foreach (rid; runnerResults_.keys.sort())
-    //   print(runnerResults_[rid] ~ " finished.");
+    // foreach (rid; tokenResults_.keys.sort())
+    //   print(tokenResults_[rid] ~ " finished.");
     print("DONE, totalTime: " ~ text(currentTime_));
     return currentTime_;
   }
 
-  void delegate(ulong currTime, ulong cID, ulong lastID) fnOnRunnerJoin;
-  void delegate(ulong currTime, ulong cID, ulong firstID) fnOnRunnerSplit;
+  void delegate(ulong currTime, ulong cID, ulong lastID) fnOnTokenJoin;
+  void delegate(ulong currTime, ulong cID, ulong firstID) fnOnTokenSplit;
   void delegate() fnOnIncTime;
   void delegate(ulong agentID, ulong currTime, ulong duration) fnOnStartFunction;
 
 private:
   Rebindable!(const BusinessProcess) proc_;
-  Runner[] runners_;
-  Runner.Queue queue_;
+  Token[] tokens_;
+  Token.Queue queue_;
   Simulation* psim_;
 
   ulong currentTime_;
@@ -156,10 +156,10 @@ private:
     // writeln(msg);
   }
 
-  // string[size_t] runnerResults_;
+  // string[size_t] tokenResults_;
 
-  void onRunnerSplit(ref int runnerElemId) {
-    auto r = runners_[runnerElemId];
+  void onTokenSplit(ref int tokenElemId) {
+    auto r = tokens_[tokenElemId];
     auto type = r.currEE.asGate.type;
     immutable bool isAnd = type == Gate.Type.and;
     immutable bool isXor = type == Gate.Type.xor;
@@ -169,11 +169,10 @@ private:
     if (isAnd)
       splits = r.currEE.succs;
     else {
-
       if (!fillSOs_) {
         ptrdiff_t foundIdx = -1; // = psim_.fos.countUntil!((fp, r) => r.id == fp.rid && r.currEE.id == fp.bid)(r);
         foreach (i, ref sp; psim_.fos) {
-          if (r.id == sp.rid && r.currEE.id == sp.bid && !foundSOIdcs_.canFind(i)) {
+          if (r.id == sp.tid && r.currEE.id == sp.bid && !foundSOIdcs_.canFind(i)) {
             foundIdx = i;
             break;
           }
@@ -256,24 +255,25 @@ private:
       }
     }
 
-    auto addRunner = delegate Runner(ulong bid) {
-      runners_ ~= new Runner(r, bid);
-      auto newRunner = runners_[$ - 1];
+    auto addToken = delegate Token(ulong bid) {
+      tokens_ ~= new Token(r, bid);
+      auto newToken = tokens_[$ - 1];
       if (!r.path.empty) {
-        newRunner.pathStart ~= r.path[0];
+        newToken.pathStart ~= r.path[0];
       }
-      newRunner.path = [[]];
+      newToken.path = [[]];
       if (r.path.length > 1)
-        newRunner.path ~= r.path[1 .. $];
-      return newRunner;
+        newToken.path ~= r.path[1 .. $];
+      return newToken;
     };
 
     foreach (bid; splits) {
-      auto newRunner = addRunner(bid);
-      if (fnOnRunnerSplit)
-        fnOnRunnerSplit(r.time.func + r.time.queue, r.currEE.id, bid);
+      auto newToken = addToken(bid);
+      newToken.lastEEID = r.currEE.id;
+      if (fnOnTokenSplit)
+        fnOnTokenSplit(r.time.func + r.time.queue, r.currEE.id, bid);
       if (isOr) {
-        newRunner.branchData ~= Runner.BranchData(splits.length);
+        newToken.branchData ~= Token.BranchData(splits.length);
       }
     }
 
@@ -281,50 +281,52 @@ private:
     //   foreach (sp; splits)
     //     if (sp == su)
     //       continue succLoop;
-    //   auto newRunner = addRunner(su);
+    //   auto newToken = addToken(su);
     // }
 
-    runners_ = runners_.remove(runnerElemId--);
+    tokens_ = tokens_.remove(tokenElemId--);
   }
 
-  void onRunnerJoin(ref int runnerElemId) {
-    auto r = runners_[runnerElemId];
+  void onTokenJoin(ref int tokenElemId) {
+    auto r = tokens_[tokenElemId];
     immutable bool isOr = r.currEE.asGate.type == Gate.Type.or;
     immutable bool isXor = r.currEE.asGate.type == Gate.Type.xor;
     immutable bool isAnd = (cast(Gate) r.currEE).type == Gate.Type.and;
-    immutable auto runnersAtThisPos = runners_.fold!((a, b) => r.id == b.id && b.currEE.id == r.currEE.id ? a + 1 : a)(
+    immutable auto tokensAtThisPos = tokens_.fold!((a, b) => r.id == b.id && b.currEE.id == r.currEE.id ? a + 1 : a)(
         0);
 
-    size_t desiredRunnersCount;
+    size_t desiredTokensCount;
     if (isAnd)
-      desiredRunnersCount = r.currEE.deps.length;
+      desiredTokensCount = r.currEE.deps.length;
     else if (isXor)
-      desiredRunnersCount = 1;
+      desiredTokensCount = 1;
     else { // isOr
       assert(!r.branchData.empty, r.str ~ "'s branchData is empty");
-      desiredRunnersCount = r.branchData[$ - 1].concurrentCount;
+      desiredTokensCount = r.branchData[$ - 1].concurrentCount;
     }
 
-    if (runnersAtThisPos == desiredRunnersCount) {
-      // print(r.str ~ ": All of the " ~ text(desiredRunnersCount) ~ " branches joined");
+    if (tokensAtThisPos == desiredTokensCount) {
+      // print(r.str ~ ": All of the " ~ text(desiredTokensCount) ~ " branches joined");
       ulong mtime = 0;
-      Runner mr = null;
+      Token mr = null;
       ulong[][] paths;
-      for (int i = 0; i < runners_.length; i++) {
-        auto ri = runners_[i];
+      for (int i = 0; i < tokens_.length; i++) {
+        auto ri = tokens_[i];
         if (ri.id != r.id)
           continue;
         if (ri.currEE.id == r.currEE.id) {
-          if (fnOnRunnerJoin)
-            fnOnRunnerJoin(ri.time.func + ri.time.queue, r.currEE.id, ri.lastEEID);
+          if (fnOnTokenJoin) {
+            writeln("currEE: ", r.currEE.name, ", r.lastEE: ", r.lastEEID, ", ri.lastEE: ", ri.lastEEID);
+            fnOnTokenJoin(ri.time.func + ri.time.queue, r.currEE.id, ri.lastEEID);
+          }
           if (ri.time.func >= mtime) {
             mr = ri;
             mtime = ri.time.func;
           }
           paths ~= ri.path.dup;
           // result ~= rs[i].str ~ " joined\n";
-          runners_ = runners_.remove(i--);
-          runnerElemId--;
+          tokens_ = tokens_.remove(i--);
+          tokenElemId--;
         }
       }
 
@@ -336,26 +338,26 @@ private:
         mr.branchData = mr.branchData[0 .. $ - 1];
       }
 
-      runners_ ~= new Runner(mr, r.currEE.id);
-      auto newRunner = runners_[$ - 1];
-      newRunner.step();
+      tokens_ ~= new Token(mr, r.currEE.id);
+      auto newToken = tokens_[$ - 1];
+      newToken.step();
 
-      if (!newRunner.pathStart.empty) {
-        newRunner.path[0] = newRunner.pathStart[$ - 1] ~ newRunner.path[0]; // XXX
-        newRunner.pathStart = newRunner.pathStart[0 .. $ - 1];
+      if (!newToken.pathStart.empty) {
+        newToken.path[0] = newToken.pathStart[$ - 1] ~ newToken.path[0]; // XXX
+        newToken.pathStart = newToken.pathStart[0 .. $ - 1];
       }
       foreach (p; mr.path)
         paths = remove!(a => a == p)(paths);
-      newRunner.path ~= paths.dup;
+      newToken.path ~= paths.dup;
     } else {
-      // print(r.str ~ ": runnersAtThisPos="~text(runnersAtThisPos)~", desiredRunnersCount="~text(desiredRunnersCount));
+      // print(r.str ~ ": tokensAtThisPos="~text(tokensAtThisPos)~", desiredTokensCount="~text(desiredTokensCount));
     }
   }
 
-  void onRunnerEnd(ref int runnerElemId) {
-    // writeln("RUNNER END !!! TIME=", runners_[runnerElemId].time, "\n\n");
-    print(runners_[runnerElemId].str ~ " finished.");
-    // runnerResults_[runners_[runnerElemId].id] = runners_[runnerElemId].str;
-    runners_ = runners_.remove(runnerElemId--);
+  void onTokenEnd(ref int tokenElemId) {
+    // writeln("RUNNER END !!! TIME=", tokens_[tokenElemId].time, "\n\n");
+    print(tokens_[tokenElemId].str ~ " finished.");
+    // tokenResults_[tokens_[tokenElemId].id] = tokens_[tokenElemId].str;
+    tokens_ = tokens_.remove(tokenElemId--);
   }
 }

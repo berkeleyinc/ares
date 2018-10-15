@@ -72,15 +72,16 @@ private class MoveModFactory {
 
     PathTime[ulong] pathTimesPerFork; // time per path, time is an array to handle possible loops
     auto sor = new Simulator(proc_);
-    sor.fnOnRunnerSplit = delegate(ulong currTime, ulong cID, ulong firstID) {
+    sor.fnOnTokenSplit = delegate(ulong currTime, ulong cID, ulong firstID) {
       auto conn = proc_(cID).asGate;
-      // writeln("on runner split cID=", cID, ", firstID=", firstID, ", has partner=", !conn.partner.isNull);
       if (conn.type != Gate.Type.and || conn.partner.isNull)
         return;
+      writeln("on token split cID=", cID, ", firstID=", firstID, ", has partner=", !conn.partner.isNull);
 
       if (conn.partner !in pathTimesPerFork) {
         pathTimesPerFork[conn.partner] = PathTime.init;
         pathTimesPerFork[conn.partner].startTime = currTime;
+        writeln("cID=", cID, ", conn.partner=", conn.partner);
       }
       // if (currTime != pathTimesPerFork[conn.partner].startTime) {
       //   throw new Exception("currTime=" ~ currTime.text ~ ", pathTimesPerFork[conn.partner].startTime="
@@ -88,10 +89,10 @@ private class MoveModFactory {
       // }
       pathTimesPerFork[conn.partner].startIDs ~= firstID;
     };
-    sor.fnOnRunnerJoin = delegate(ulong currTime, ulong cID, ulong lastID) {
-      // writeln("on runner join urID=", urID, ", firstID=", firstID, ", avgTime=", pathTimesPerFork[firstID][$ - 1].times.mean);
+    sor.fnOnTokenJoin = delegate(ulong currTime, ulong cID, ulong lastID) {
       if (proc_(cID).asGate.type != Gate.Type.and || cID !in pathTimesPerFork)
         return;
+      writeln("on token join cID=", cID, ", lastID=", lastID, ", currTime=", currTime);
 
       pathTimesPerFork[cID].times[lastID] ~= [cast(double)(currTime - pathTimesPerFork[cID].startTime)];
       // XXX that's how we can find the right startID for the lastID
@@ -130,6 +131,9 @@ private class MoveModFactory {
         foreach (lb; pathTimesPerFork[cID].times.byKeyValue()) {
           lastIDs ~= lb.key;
           times ~= lb.value.mean;
+        }
+        if (lastIDs.empty) {
+          throw new Exception("no path times for fork " ~ text(cID));
         }
 
         maxTime = times.maxElement;
@@ -246,8 +250,8 @@ private class MoveModFactory {
       return false;
     if (next.isFunc) {
       auto f = next.asFunc;
-      bool someoneHasDeps = newNeighborIDs.filter!(nid => proc_(nid).isFunc).any!(nid => proc_(nid)
-          .asFunc.dependsOn.canFind(f.id));
+      bool someoneHasDeps = newNeighborIDs.filter!(nid => proc_(nid).isFunc)
+        .any!(nid => proc_(nid).asFunc.dependsOn.canFind(f.id));
       if (someoneHasDeps)
         return false; // TODO the element after that might not have itself in someones deps
       if (f.dependsOn.any!(dep => newNeighborIDs.canFind(dep)))

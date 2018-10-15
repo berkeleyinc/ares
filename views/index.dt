@@ -78,10 +78,10 @@ html
               label.col simulations per BP
               input#inpSPP.col-1.form-control.form-control-sm(type="number", value="")
             div.form-row
-              label.col amount of runners per simulation
+              label.col amount of tokens per simulation
               input#inpRPS.col-1.form-control.form-control-sm(type="number", value="")
             div.form-row
-              label.col time between runner starts
+              label.col time between token starts
               input#inpTBR.col-1.form-control.form-control-sm(type="number", value="")
             div.form-row
               label.col take same paths from BP 1 for BPs 2..$

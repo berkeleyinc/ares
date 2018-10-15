@@ -60,8 +60,8 @@ class MultiSimulator {
       Simulation.SplitOption[] sos;
       foreach (i, ee; p) {
         if (inp(ee).isGate && inp(ee).succs.length > 1 && inp(ee).asGate.type != Gate.Type.and) {
-          foreach (ref rt; sim.startTimePerRunner)
-            sos ~= Simulation.SplitOption(rt.rid, ee, [p[i + 1]]);
+          foreach (ref rt; sim.startTimePerToken)
+            sos ~= Simulation.SplitOption(rt.tid, ee, [p[i + 1]]);
         }
       }
       sim.fos = sos;

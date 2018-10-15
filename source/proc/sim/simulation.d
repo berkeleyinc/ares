@@ -4,27 +4,27 @@ import std.typecons : Tuple, tuple;
 
 struct Simulation {
   struct SplitOption {
-    ulong rid;
+    ulong tid;
     ulong bid;
     ulong[] splits;
   }
 
-  alias RunnerTime = Tuple!(size_t, "rid", ulong, "time");
-  RunnerTime[] startTimePerRunner;
+  alias TokenTime = Tuple!(size_t, "tid", ulong, "time");
+  TokenTime[] startTimePerToken;
   SplitOption[] fos;
 
   @property static Simulation def() {
     Simulation sim;
-    sim.startTimePerRunner ~= RunnerTime(0UL, 0UL);
-    // sim.startTimePerRunner ~= RunnerTime(1UL, 0UL);
+    sim.startTimePerToken ~= TokenTime(0UL, 0UL);
+    // sim.startTimePerToken ~= TokenTime(1UL, 0UL);
     return sim;
   }
 
-  static Simulation construct(size_t runnerCount, ulong timeBetween) {
+  static Simulation construct(size_t tokenCount, ulong timeBetween) {
     Simulation sim;
     ulong rt = 0;
-    foreach (size_t i; 0 .. runnerCount) {
-      sim.startTimePerRunner ~= [tuple!("rid", "time")(i, rt)];
+    foreach (size_t i; 0 .. tokenCount) {
+      sim.startTimePerToken ~= [tuple!("tid", "time")(i, rt)];
       rt += timeBetween;
     }
     return sim;

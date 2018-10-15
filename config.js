@@ -23,10 +23,12 @@
             15
         ],
         "GEN_maxDepth": 7,
-        "GEN_maxFuncs": 13,
+        "GEN_maxFuncs": 4,
         "SIM_parRunnersPerSim": 5,
+        "SIM_parTokensPerSim": 1,
         "SIM_reuseChosenPaths": true,
         "SIM_simsPerBP": 2500,
-        "SIM_timeBetweenRunnerStarts": 0
+        "SIM_timeBetweenRunnerStarts": 0,
+        "SIM_timeBetweenTokenStarts": 0
     }
 }

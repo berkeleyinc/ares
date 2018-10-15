@@ -5,7 +5,7 @@ import proc.businessProcess;
 import std.stdio;
 import std.random;
 import std.conv : text;
-import std.algorithm : map, each, max;
+import std.algorithm : map, each, min, max;
 import std.array : array;
 import std.range : empty;
 
@@ -125,11 +125,16 @@ class BusinessProcessGenerator {
           return generate(gc, from, pDepth, pFuncs, insideAnd);
         }
         EE startConn = bp.add([from.id], new Gate(Gate.Type.xor));
-        // (*pDepth)++;
-        EE line = generate(gc, startConn, pDepth, pFuncs, insideAnd);
+        EE nextConn = bp.add([startConn.id], new Gate(Gate.Type.xor));
+        EE line = generate(gc, nextConn, pDepth, pFuncs, insideAnd);
         startConn.deps ~= [line.id];
-        // (*pDepth)--;
-        return startConn;
+
+        // writeln("startConn.id=", startConn.id, ", nextConn.id=", nextConn.id, ", startConn.dep=", line.id);
+
+        // EE startConn = bp.add([from.id], new Gate(Gate.Type.xor));
+        // EE line = generate(gc, startConn, pDepth, pFuncs, insideAnd);
+        // startConn.deps ~= [line.id];
+        return nextConn;
       }
 
       (*pDepth)++;
@@ -199,7 +204,7 @@ class BusinessProcessGenerator {
 
     int maxDepth = cfg[Cfg.R.GEN_maxDepth].as!int;
     int maxFuncs = cfg[Cfg.R.GEN_maxFuncs].as!int;
-    auto ee = generate(Limits(uniform(2, maxDepth), uniform(5, maxFuncs)), null, null, null);
+    auto ee = generate(Limits(uniform(2, maxDepth), uniform(min(5, maxFuncs - 1), maxFuncs)), null, null, null);
     addEnd(ee);
 
     bp.postProcess();

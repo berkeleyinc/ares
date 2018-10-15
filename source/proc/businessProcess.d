@@ -166,6 +166,7 @@ class BusinessProcess {
         }
       }
     }
+
     updateSuccs();
 
     // set Function.agts 
@@ -216,18 +217,16 @@ class BusinessProcess {
     // identify Gate loops
     foreach (ref c; gates) {
       immutable bool isSplit = c.succs.length > 1;
-      if (!isSplit || c.type != Gate.Type.xor)
+      if (isSplit || c.type != Gate.Type.xor)
         continue;
 
-      auto tillObjs = listAllObjs(c, typeid(Gate), true);
+      auto tillObjs = listAllObjsAfter(c, typeid(EE));
+      writeln("listAllAfter for ", c.name, ": ", tillObjs);
 
-      foreach (i, cs; c.succs) {
-        if (tillObjs.canFind(cs)) {
+      foreach (i, cs; c.deps) {
+        if (tillObjs.canFind(cs) && epcElements[cs].succs.canFind(c.id)) {
           writeln(c.name ~ " has loop branch " ~ epcElements[cs].name);
           c.loopsFor ~= cs;
-          // assert(epcElements[cs].deps.length > 1, "only support for loop branches without objs in between"); // TODO
-          // auto bconn = epcElements[cs].asGate;
-          // bconn.loopsFor ~= c.id;
         }
       }
     }
@@ -241,7 +240,8 @@ class BusinessProcess {
       if (!isSplit || c.type == Gate.Type.xor)
         continue;
       Tuple!(size_t, "index", ulong, "value")[] checkArr;
-      auto allAfter = c.succs.map!(cs => listAllObjs(epcElements[cs], typeid(Gate), false)).array;
+      auto allAfter = c.succs.map!(cs => listAllObjsAfter(epcElements[cs], typeid(Gate))).array;
+      writeln("allAfter for each succ of ", c.name, ": ", allAfter);
       // ulong[][] cmbs;
       // for (size_t i = c.succs.length; i >= 2; i--)
       //   cmbs ~= comb(c.succs, i);
@@ -258,7 +258,8 @@ class BusinessProcess {
         //   continue;
         // listAllObjs preserves the order of found objects but for setIntersection, we need to sort the input arrays
         // to later restore the original found-order, we enumerate the results 
-        auto branchObjs = allAfter[i].remove!(a => a == c.id || !epcElements[a].asGate.partner.isNull); // listAllObjs(epcElements[cs], typeid(Gate), false);
+        auto branchObjs = allAfter[i].remove!(a => a == c.id || epcElements[a].asGate.type != c.type
+            || !epcElements[a].asGate.partner.isNull); // listAllObjs(epcElements[cs], typeid(Gate), false);
         // if (branchObjs.canFind(cs)) {
         //   epcElements[cs].asGate.loopsFor ~= cs;
         //   continue;
@@ -278,7 +279,7 @@ class BusinessProcess {
       //}
       // writeln("For ", c.name, ": ", afterConnsPerBranch);
       // XXX only with xor Gates you can build non-hierarchical layouts
-      if (checkArr.empty && c.type != Gate.Type.xor) {
+      if (checkArr.empty) {
         throw new Exception("Can't find partner for " ~ c.name);
       }
       // assert(!checkArr.empty);
@@ -311,6 +312,11 @@ class BusinessProcess {
       // assert(c.succs.length == epcElements[checkArr[0]].deps.length, "Didn't find the right partner Gate for " ~ c.name);
     }
 
+      import std.file;
+      import graphviz.dotGenerator;
+
+      string doto = generateDot(this);
+      write("/tmp/graph2.dot", doto);
     auto removeGateIDs = tuple!(long, long)(-1, -1);
     do {
       if (removeGateIDs[0] >= 0) {
@@ -325,8 +331,8 @@ class BusinessProcess {
         // return;
       }
 
-gateRemover:
-      foreach (leftIDX, ref left; gates) {
+
+      gateRemover: foreach (leftIDX, ref left; gates) {
         if (left.type != Gate.Type.and || left.partner.isNull || left.succs.length <= 1)
           continue;
 
@@ -339,6 +345,8 @@ gateRemover:
 
           auto outerPartner = epcElements[left.partner].asGate;
           auto innerPartner = epcElements[right.partner].asGate;
+
+          assert (outerPartner.type == Gate.Type.and && innerPartner.type == Gate.Type.and);
 
           assert(innerPartner.succs.length == 1);
           assert(outerPartner.succs.length == 1);
@@ -354,7 +362,7 @@ gateRemover:
           right.deps = left.deps.dup; // OK
           foreach (s; left.succs)
             if (s != rightID)
-              epcElements[s].deps = [rightID].dup; // OK
+              epcElements[s].deps = epcElements[s].deps.remove!(a => epcElements[a].id == left.id) ~ [rightID].dup; // OK
           removeGateIDs[0] = leftIDX;
 
           if (!outerPartner.succs.empty) {
@@ -365,7 +373,7 @@ gateRemover:
           foreach (depID; outerPartner.deps)
             if (depID != innerPartner.id)
               innerPartner.deps ~= depID; // OK
-          
+
           foreach (outerIDX, ref gate; gates)
             if (outerPartner.id == gate.id) {
               removeGateIDs[1] = outerIDX;
@@ -378,13 +386,13 @@ gateRemover:
           break gateRemover;
         }
       }
-    } while (removeGateIDs[0] != -1);
+    }
+    while (removeGateIDs[0] != -1);
 
-    import std.file;
-    import graphviz.dotGenerator;
-
+      import std.file;
+      import graphviz.dotGenerator;
     string dot = generateDot(this);
-    write("/tmp/graph2.dot", dot);
+    write("/tmp/graph3.dot", dot);
 
   }
 
@@ -437,10 +445,21 @@ private:
 
       if (!tillID.isNull() && curr.id == tillID)
         return;
-      foreach (d; before ? curr.deps : curr.succs) {
+      addIDsLoop: foreach (d; before ? curr.deps : curr.succs) {
         // to handle Loops in the EPC
-        if (allIDs.canFind(d) /*|| curr.isGate && curr.asGate.loopsFor.canFind(d)*/)
+        bool contGetObjs = true;
+        // foreach (checkLoopEl; before ? epcElements[d].deps : epcElements[d].succs) {
+        //   if (epcElements[checkLoopEl].isGate && epcElements[checkLoopEl].asGate.loopsFor.canFind(d))
+        //     contGetObjs = false;
+        // }
+        if (allIDs.canFind(d))
           continue;
+        if (!before && epcElements[d].isGate && epcElements[d].asGate.loopsFor.canFind(curr.id) //
+          
+            || before && curr.isGate && curr.asGate.loopsFor.canFind(d)) //continue;
+          contGetObjs = false;
+        // if (d == ee.id)
+        //   continue;
         allIDs ~= d;
 
         const EE o = epcElements[d];
@@ -451,7 +470,9 @@ private:
         }
         if (rightType)
           fids ~= d;
-        getObjs(allIDs, fids, o);
+        if (contGetObjs) {
+          getObjs(allIDs, fids, o);
+        }
       }
     }
 

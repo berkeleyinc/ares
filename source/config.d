@@ -65,8 +65,8 @@ class Cfg {
     GEN_maxFuncs, // max function count of generated graphs
     // GEN_agentAssignProbs, // 
     SIM_simsPerBP, // run simulations per BP
-    SIM_parRunnersPerSim, // how many runners to start per simulation
-    SIM_timeBetweenRunnerStarts, // time between start of runners 
+    SIM_parTokensPerSim, // how many tokens to start per simulation
+    SIM_timeBetweenTokenStarts, // time between start of runners 
     SIM_reuseChosenPaths // Simulator will choose same paths from first BP (BP 1)
   }
 
@@ -158,9 +158,9 @@ private:
       return JSONValue(13);
     case R.SIM_simsPerBP:
       return JSONValue(2500);
-    case R.SIM_parRunnersPerSim:
+    case R.SIM_parTokensPerSim:
       return JSONValue(1);
-    case R.SIM_timeBetweenRunnerStarts:
+    case R.SIM_timeBetweenTokenStarts:
       return JSONValue(0);
     case R.SIM_reuseChosenPaths:
       return JSONValue(true);

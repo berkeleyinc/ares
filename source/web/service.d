@@ -68,9 +68,9 @@ class WebService {
       //process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
       //process = gen.BusinessProcessGenerator.generate();
 
-      // auto p = assignAgentExample(false);
+      auto p = assignAgentExample(false);
 
-      auto p = dilemmaExample();
+      //auto p = dilemmaExample();
 
       process = p;
 
@@ -254,9 +254,9 @@ class WebService {
     logInfo(__FUNCTION__);
     // auto newBusinessProcess = process.clone();
 
-    const size_t runnerCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parRunnersPerSim].as!size_t;
-    const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenRunnerStarts].as!ulong;
-    Simulation defSim = Simulation.construct(runnerCount, timeBetween);
+    const size_t tokenCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parTokensPerSim].as!size_t;
+    const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenTokenStarts].as!ulong;
+    Simulation defSim = Simulation.construct(tokenCount, timeBetween);
 
     JSONValue json;
     auto m = new BusinessProcessModifier(process, defSim);
@@ -298,11 +298,11 @@ class WebService {
     logInfo(__FUNCTION__);
 
     const size_t simCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_simsPerBP].as!size_t;
-    const size_t runnerCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parRunnersPerSim].as!size_t;
-    const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenRunnerStarts].as!ulong;
-    string msg = "Running " ~ simCount.text ~ " simulations per BP with " ~ runnerCount.text ~ " Runners each ...\n";
+    const size_t tokenCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parTokensPerSim].as!size_t;
+    const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenTokenStarts].as!ulong;
+    string msg = "Running " ~ simCount.text ~ " simulations per BP with " ~ tokenCount.text ~ " Tokens each ...\n";
 
-    Simulation defSim = Simulation.construct(runnerCount, timeBetween);
+    Simulation defSim = Simulation.construct(tokenCount, timeBetween);
 
     ulong[] times;
     times.length = processCount;

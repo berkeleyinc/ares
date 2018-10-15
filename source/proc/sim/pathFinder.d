@@ -2,7 +2,7 @@ module proc.sim.pathFinder;
 
 import proc.businessProcess;
 
-import std.algorithm : sort, map, canFind;
+import std.algorithm : sort, map, canFind, any;
 import std.array : join, array;
 import std.conv : text;
 import std.stdio : writeln;
@@ -43,11 +43,15 @@ class PathFinder {
       findPaths(ee.succs[0], path);
 
       // paths_.sort!("a.time > b.time");
-      string pstr;
-      foreach (p; paths_)
-        pstr ~= "\t" ~ text(p) ~ "\n";
+      // string pstr;
+      // foreach (p; paths_)
+      //   pstr ~= "\t" ~ text(p) ~ "\n";
 
-      //writeln("EE_PATHS (" ~ text(paths_.length) ~ "):\n" ~ pstr);
+      // writeln("EE_PATHS (" ~ text(paths_.length) ~ "):\n" ~ pstr);
+      //     ubyte[] data = process_.save();
+      //     import std.file;
+
+      //     write("bp.error.2", data);
     }
     return paths_.map!(p => p.allIDs).array;
   }
@@ -60,6 +64,14 @@ private:
     const EE ee = process_.epcElements[eeID];
     if (ee.isAgent) {
       return;
+    }
+
+    bool canFindPaths(ulong eeID, ulong prevID) {
+      if (process_(eeID).isGate && process_(eeID).asGate.loopsFor.canFind(prevID))
+        return false;
+      return true;
+      // if (process_(eeID).succs.any!(sg => process_(sg).isGate && process_(sg).asGate.loopsFor.canFind(eeID)))
+      //   return;
     }
 
     // handle loops in EPCs
@@ -76,7 +88,7 @@ private:
       path.allIDs ~= ee.id;
       path.time += (cast(Function) ee).dur;
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
-      if (!ee.succs.empty && !path.allIDs.canFind(ee.succs[0]))
+      if (!ee.succs.empty && !path.allIDs.canFind(ee.succs[0]) && canFindPaths(ee.succs[0], ee.id))
         findPaths(ee.succs[0], path, subPath, stopOn);
       else {
         paths_ ~= path;
@@ -90,9 +102,9 @@ private:
         return;
       }
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
-      if (!path.allIDs.canFind(ee.succs[0]))
+      if (!path.allIDs.canFind(ee.succs[0]) && canFindPaths(ee.succs[0], ee.id)) {
         findPaths(ee.succs[0], path, subPath, stopOn);
-      else {
+      } else {
         paths_ ~= path;
         return;
       }
@@ -105,7 +117,9 @@ private:
       if (isSplit) {
         Path[] branchPaths;
         foreach (o; ee.succs) {
-          if (ee.asGate.loopsFor.canFind(o)) {
+          //if (process_(o).isGate && process_(o).asGate.loopsFor.canFind(ee.id)) {
+          //if (process_(o).succs.any!(sg => process_(sg).isGate && process_(sg).asGate.loopsFor.canFind(o))) {
+          if (!canFindPaths(o, ee.id)) {
             writeln("SKIPPING LOOP");
             continue;
           }
@@ -126,8 +140,15 @@ private:
         // writeln(">>> path += bigPath: " ~ text(path));
 
         const EE* lastEE = &process_.epcElements[bigPath.allIDs[$ - 1]];
-        if (!lastEE.succs.empty)
-          findPaths(lastEE.succs[0], path, subPath + 1, stopOn);
+        if (!lastEE.succs.empty) {
+          //if (process_(lastEE.succs[0]).isGate && process_(lastEE.succs[0]).asGate.loopsFor.canFind(lastEE.id)) {
+
+          if (!canFindPaths(lastEE.succs[0], lastEE.id)) {
+            writeln("SKIPPING LOOP 2");
+            //continue;
+          } else
+            findPaths(lastEE.succs[0], path, subPath + 1, stopOn);
+        }
         if (!isAnd) {
           foreach (p; branchPaths) {
             if (p == bigPath)
@@ -137,7 +158,8 @@ private:
               // prevent stack overflow when processing loops
               // if (path.allIDs.canFind(lastEE2.succs[0]))
               //   continue;
-              findPaths(lastEE2.succs[0], p, subPath + 1, 0);
+              if (canFindPaths(lastEE2.succs[0], lastEE2.id))
+                findPaths(lastEE2.succs[0], p, subPath + 1, 0);
             }
           }
         }
@@ -146,11 +168,9 @@ private:
         if (stopOn > 0 && stopOn == subPath)
           return;
         else {
-          // prevent stack overflow when processing loops
-          // if (path.allIDs.canFind(bo.succs[0]))
-          //   return;
-          // writeln("FOUND DUP!!");
-          findPaths(ee.succs[0], path, subPath - 1, stopOn);
+
+          if (canFindPaths(ee.succs[0], ee.id))
+            findPaths(ee.succs[0], path, subPath - 1, stopOn);
         }
       }
     }

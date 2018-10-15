@@ -311,7 +311,7 @@ function onSiteReady() {
     var cfg = JSON.parse(data);
     var cfgProps = Array.from({length: 5}, i => 'value').concat(['checked']);
     var cfgInpIDs = ['BD', 'FC', 'SPP', 'RPS', 'TBR', 'RCP'];
-    var cfgEntries = ['GEN_maxDepth', 'GEN_maxFuncs', 'SIM_simsPerBP', 'SIM_parRunnersPerSim', 'SIM_timeBetweenRunnerStarts', 'SIM_reuseChosenPaths'];
+    var cfgEntries = ['GEN_maxDepth', 'GEN_maxFuncs', 'SIM_simsPerBP', 'SIM_parTokensPerSim', 'SIM_timeBetweenTokenStarts', 'SIM_reuseChosenPaths'];
     var setConfig = function(key, val) {
       console.log("set_config, key="+key+", val="+val);
       $.get('/set_config?key=' + key + "&val=" + val);
