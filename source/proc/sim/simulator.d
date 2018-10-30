@@ -109,7 +109,6 @@ class Simulator {
         case Token.State.join:
           onTokenJoin(i);
           break;
-        case Token.State.next:
         case Token.State.none:
           assert(0, "State.none/next shouldn't appear here");
         }

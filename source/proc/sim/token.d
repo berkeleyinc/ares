@@ -37,8 +37,8 @@ class Token {
   //   
 
   // }
-  this(void delegate(string) fprint, void delegate(ulong, ulong, ulong) fOnStartFunc, size_t id, const BusinessProcess p,
-      ref Queue q, ulong bid, Nullable!ulong endID = Nullable!ulong.init) {
+  this(void delegate(string) fprint, void delegate(ulong, ulong, ulong) fOnStartFunc, size_t id,
+      const BusinessProcess p, ref Queue q, ulong bid, Nullable!ulong endID = Nullable!ulong.init) {
     this.uniqueID = uniqueIDCounter_++;
     this.id = id;
     currEE = p.epcElements[bid];
@@ -86,16 +86,16 @@ class Token {
   ulong[][] pathStart;
 
   @property string str() {
-    return "R_" ~ text(id) ~ "/" ~ text(uniqueID) ~ "(S:" ~ text(
+    return "T_" ~ text(id) ~ "/" ~ text(uniqueID) ~ "(S:" ~ text(
         currState) ~ ", EE:" ~ currEE.name ~ ", " ~ text(path) ~ ", time[" ~ text(time.func) ~ "," ~ text(
-        time.join) ~ "," ~ text(time.queue) ~ "," ~ text(time.total) ~ "], cont=" ~ text(continueTime) ~ ")" ~ (currState == State.wait ? ", " ~ text(currWaitState) : "");
+        time.join) ~ "," ~ text(time.queue) ~ "," ~ text(time.total) ~ "], cont=" ~ text(
+        continueTime) ~ ")" ~ (currState == State.wait ? ", " ~ text(currWaitState) : "");
   }
 
   enum State {
     wait,
     end,
     join,
-    next,
     split,
     none
   }
@@ -107,8 +107,12 @@ class Token {
 
   void incTime(ulong step) {
     bool tokensInQueueOfCurrentFunc = currEE.isFunc ? currEE.asFunc.agts.any!(a => a in (*queue_)) : false;
-    if (currEE.id !in (*queue_) && !tokensInQueueOfCurrentFunc)
+
+    if (currEE.id !in (*queue_) && !tokensInQueueOfCurrentFunc) {
+      // no tokens are in the queue of the current node or it's agents if it's a Function
+      // then the token should just step over to the next node and not increase it's time
       return;
+    }
 
     if (currState == State.wait) {
       if (currWaitState == WaitState.inFunc)
@@ -131,73 +135,31 @@ class Token {
 
   State poll(ulong currTime) {
     currentTime_ = currTime;
-    if (currState == State.end)
-      return State.end;
-    if (currState == State.wait) {
-      if (continueTime_ > currTime)
-        return State.wait;
-      int n = currEE.asFunc.agts.fold!((t, p) => (p in *queue_ && !(*queue_)[p].empty) ? t + 1 : t)(0);
-      // n: how many Agent-queues are busy
-      auto m = currEE.asFunc.agts.length;
-      // writeln("N=" ~ text(n), ", M=", m);
-      // assert(n <= 1);
+    if (currState == State.end || currState == State.wait && continueTime_ > currTime)
+      return currState;
+    if (currState == State.wait && currWaitState == WaitState.inQueue) {
+      bool anyEmpty = currEE.asFunc.agts.any!(p => p !in *queue_ || (*queue_)[p].empty);
+      if (anyEmpty && currEE.id in *queue_ && (*queue_)[currEE.id][0] == this) {
+        // if currEE (waiting-) queue has elems but the agents queues not, fill Agent queue
 
-      // find out if this Token is the next entry in the queue for a specific p (Agent)
+        size_t p = currEE.asFunc.agts.find!(p => p in *queue_ && (*queue_)[p].empty)[0]; // there has to be an empty Agents queue
+        (*queue_)[p] ~= this;
+        (*queue_)[currEE.id] = (*queue_)[currEE.id][1 .. $];
+        // print("filling agent queue:");
+        startFunction(p);
+      }
+      // print("currEE=" ~ currEE.name ~ " inQueue");
+
+      return State.wait;
+    }
+    if (currState == State.wait && currWaitState == WaitState.inFunc) {
       auto findMe = (size_t p) => !(*queue_)[p].empty && (*queue_)[p][0] == this;
-
-      bool myTurn = any!findMe(currEE.asFunc.agts);
-      if (continueTime_ == 0) {
-        // print("currEE=" ~ currEE.name ~ " continueTime_ == 0");
-        // if we came up in the queue, we can start
-        if (myTurn) {
-          ulong nextPartID = currEE.asFunc.agts.find!findMe()[0];
-          startFunction(nextPartID);
-          return State.wait;
-        }
-
-        currWaitState = WaitState.inQueue;
-
-        // any Agent queues of current Function is empty ?
-        bool anyEmpty = currEE.asFunc.agts.any!(p => p !in *queue_ || (*queue_)[p].empty);
-        if (anyEmpty && currEE.id in *queue_ && (*queue_)[currEE.id][0] == this) {
-          // if currEE (waiting-) queue has elems but the agents queues not, fill Agent queue
-
-          size_t p = currEE.asFunc.agts.find!(p => p in *queue_ && (*queue_)[p].empty)[0]; // there has to be an empty Agents queue
-          (*queue_)[p] ~= this;
-          (*queue_)[currEE.id] = (*queue_)[currEE.id][1 .. $];
-          // print("filling agent queue:");
-          startFunction(p);
-        }
-        // print("currEE=" ~ currEE.name ~ " inQueue");
-
-        return State.wait;
-      }
-      assert(myTurn);
-      // find the queue which has this Token
       size_t p = currEE.asFunc.agts.find!findMe[0];
-      // remove this Token from queue since continueTime < currTime (func time is up)
       (*queue_)[p] = (*queue_)[p][1 .. $];
-
-      // putting next element into the now free queue from the queue of the current Function
-      if ((*queue_)[p].empty) {
-        if (currEE.id in (*queue_) && !(*queue_)[currEE.id].empty) {
-          (*queue_)[p] ~= (*queue_)[currEE.id][0];
-          (*queue_)[currEE.id] = (*queue_)[currEE.id][1 .. $];
-        }
-      }
-
-      // writeln("bla step, r=" ~ str ~ ", continueTime=" ~ text(continueTime_));
       step();
     }
 
-    currState = validateStep();
-
-    if (currState == State.next) {
-      step();
-      return poll(currTime);
-    }
-
-    return currState;
+    return currState = getState();
   }
 
   void step() {
@@ -210,6 +172,7 @@ class Token {
     if (currEE.succs.empty) {
       ubyte[] data = process_.save();
       import std.file;
+
       write("bp.error", data);
       throw new Exception("currEE " ~ currEE.name ~ " succs.empty");
     }
@@ -217,52 +180,6 @@ class Token {
     lastEEID = currEE.id;
     currEE = process_.epcElements[currEE.succs[0]];
     // writeln(str ~ ": next EE: " ~ currEE.name);
-  }
-
-  void startFunction(ulong partID) {
-    assert(currEE.isFunc);
-    print("start " ~ currEE.name ~ ", with R" ~ text(partID));
-    auto dur = currEE.asFunc.dur;
-    if (onStartFunction)
-      onStartFunction(partID, currentTime_, dur);
-
-    continueTime_ = currentTime_ + dur;
-
-    if (path.empty)
-      path ~= [[]];
-    path[0] ~= currEE.id;
-
-    currWaitState = WaitState.inFunc;
-  }
-
-  State validateStep() {
-    if (currEE.isFunc) {
-      foreach (pid; currEE.asFunc.agts) {
-        if (pid !in *queue_ || (*queue_)[pid].empty) {
-          startFunction(pid);
-          // writeln("PUTTING ", str, " INTO PID=", pid);
-          (*queue_)[pid] ~= this;
-          return State.wait;
-        }
-        // (*queue_)[currEE.id] ~= Token[].init;
-      }
-
-      continueTime_ = 0;
-
-      // all Agents (agent.queue.length>1) are busy, so putting this Token into the queue of the current Function
-      (*queue_)[currEE.id] ~= this;
-      currWaitState = WaitState.inQueue;
-      return State.wait;
-    } else if (currEE.isEvent) {
-      if (!currEE.succs.empty)
-        return State.next;
-      // print(str ~ ": reached END Event: " ~ text(currEE.id));
-      return State.end;
-    } else if (currEE.isGate) {
-      bool isSplit = currEE.succs.length > 1;
-      return isSplit ? State.split : State.join;
-    }
-    assert(0, "Token.step: invalid EE type " ~ text(typeid(currEE)));
   }
 
   Rebindable!(const EE) currEE;
@@ -289,4 +206,55 @@ private:
   ulong continueTime_ = 0;
   ulong currentTime_ = 0;
   Nullable!ulong endID_;
+
+  void startFunction(ulong partID) {
+    assert(currEE.isFunc);
+    print("start " ~ currEE.name ~ ", with A" ~ text(partID));
+    auto dur = currEE.asFunc.dur;
+    if (onStartFunction)
+      onStartFunction(partID, currentTime_, dur);
+
+    continueTime_ = currentTime_ + dur;
+
+    if (path.empty)
+      path ~= [[]];
+    path[0] ~= currEE.id;
+
+    currWaitState = WaitState.inFunc;
+  }
+
+  State getState() {
+    if (currEE.isFunc) {
+      if (currEE.id !in (*queue_) || (*queue_)[currEE.id].empty)
+        foreach (pid; currEE.asFunc.agts) {
+          if (pid !in *queue_ || (*queue_)[pid].empty) {
+            startFunction(pid);
+            // writeln("PUTTING ", str, " INTO PID=", pid);
+            (*queue_)[pid] ~= this;
+            return State.wait;
+          }
+          // (*queue_)[currEE.id] ~= Token[].init;
+        }
+
+      continueTime_ = 0;
+
+      // all Agents (agent.queue.length>1) are busy, so putting this Token into the queue of the current Function
+      (*queue_)[currEE.id] ~= this;
+      currWaitState = WaitState.inQueue;
+      return State.wait;
+    } else if (currEE.isEvent) {
+      if (!currEE.succs.empty) {
+        step();
+        return getState();
+      }
+
+      // print(str ~ ": reached END Event: " ~ text(currEE.id));
+      return currState = State.end;
+    } else if (currEE.isGate) {
+      bool isSplit = currEE.succs.length > 1;
+      return isSplit ? State.split : State.join;
+    }
+    assert(0, "Token.step: invalid EE type " ~ text(typeid(currEE)));
+  }
+
 }

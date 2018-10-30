@@ -25,15 +25,18 @@ BusinessProcess assignAgentExample(bool assign = false) {
   BusinessProcess p = new BusinessProcess;
   auto e0 = p.add([], new Event);
   auto f1 = p.add([e0.id], new Function);
+  f1.asFunc.dur = __LINE__;
   p.add([f1.id], new Agent);
   auto c3 = p.add([f1.id], new Gate(Gate.Type.and));
 
   EE f06 = null;
   auto e04 = p.add([c3.id], new Event);
   f06 = p.add([e04.id], new Function);
+  f06.asFunc.dur = __LINE__;
   auto p07 = p.add([f06.id], new Agent);
   auto e4 = p.add([f06.id], new Event);
   auto f6 = p.add([e4.id], new Function);
+  f6.asFunc.dur = __LINE__;
   auto p7 = p.add([f6.id], new Agent);
   with (p.add([f6.id], new Agent))
     quals ~= f1.id;
@@ -42,6 +45,7 @@ BusinessProcess assignAgentExample(bool assign = false) {
 
   auto e5 = p.add([c3.id], new Event);
   auto f8 = p.add([e5.id], new Function);
+  f8.asFunc.dur = __LINE__;
 
   p.add([f8.id], new Agent);
   with (p.add([f6.id], new Agent))

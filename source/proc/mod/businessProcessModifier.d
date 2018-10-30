@@ -86,7 +86,13 @@ private:
   Rebindable!(const BusinessProcess) proc_;
   double origProcTime_ = -1; // BP Simulation.def time from input process
 
-  alias ModsOption = Tuple!(BusinessProcess, "proc", double, "runtime", Modification[], "mods", int, "sameTimeCount");
+  struct ModsOption {
+    BusinessProcess proc;
+    double runtime;
+    Modification[] mods;
+    int sameTimeCount;
+  }
+
   // returns saved time units
   bool findOptimalModifications(FactoryFuncs...)(out ModsOption[] mos, auto ref FactoryFuncs ffuncs) {
     writeln(__FUNCTION__);
@@ -144,8 +150,7 @@ private:
         continue;
       }
 
-checkNewModsLoop:
-      foreach (m; pms) {
+      checkNewModsLoop: foreach (m; pms) {
         foreach (mod; sourceBPMod.mods)
           if (m.toHash == mod.toHash)
             continue checkNewModsLoop;
@@ -184,7 +189,8 @@ checkNewModsLoop:
         continue;
       }
       // sourceBPMods = sourceBPMods.remove(0);
-      auto parr = ptms.map!(a => ModsOption(a.proc, a.runtime, sourceBPMod.mods ~ [a.mod], sourceBPMod.sameTimeCount + a.sameTimeDiff)).array;
+      auto parr = ptms.map!(a => ModsOption(a.proc, a.runtime, sourceBPMod.mods ~ [a.mod],
+          sourceBPMod.sameTimeCount + a.sameTimeDiff)).array;
       // auto parr = ptms.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".map!(a => ModsOption(a.proc, a.runtime, pt.mods ~ [a.mod])).array;
       assert(!parr.empty);
       // if (sourceBPMods.length + donePts.length >= 2)
@@ -195,7 +201,8 @@ checkNewModsLoop:
       //   parr.length = 2;
       sourceBPMods ~= parr;
       auto now = watch.peek();
-      sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".take(now > msecs(2500) ? (now > seconds(5) ? (now > seconds(10) ? 1 : 2) : 5) : 100).array;
+      sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".take(now > msecs(2500)
+          ? (now > seconds(5) ? (now > seconds(10) ? 1 : 2) : 5) : 100).array;
       // sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".take(5).array;
     }
 
@@ -206,7 +213,9 @@ checkNewModsLoop:
     // mos = donePts.sort!("a.runtime < b.runtime").release;
     // mos = donePts.sort!("a.runtime < b.runtime").uniq!((a, b) => a.proc.hasSameStructure(b.proc)).array;
     // mos = donePts.sort!("a.runtime < b.runtime").array;
-    mos = donePts.sort!("a.runtime < b.runtime").uniq!"a.runtime == b.runtime".array;
+    mos = donePts.sort!("a.runtime < b.runtime")
+      .uniq!"a.runtime == b.runtime"
+      .array;
     //mos = donePts.sort!("a.runtime < b.runtime").uniq!"a.runtime == b.runtime".array;
     return true;
     // donePts = donePts.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".array;

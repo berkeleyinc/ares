@@ -9,11 +9,11 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +36 proc/mod/businessProcessModifier.d
-badd +173 proc/sim/simulator.d
+badd +1 proc/mod/businessProcessModifier.d
+badd +343 proc/sim/simulator.d
 badd +80 proc/mod/assignMod.d
 badd +92 proc/mod/moveMod.d
-badd +152 proc/sim/pathFinder.d
+badd +36 proc/sim/pathFinder.d
 badd +237 proc/businessProcess.d
 badd +130 proc/businessProcessGenerator.d
 badd +303 web/service.d
@@ -27,13 +27,14 @@ badd +64 proc/sim/multiple.d
 badd +12 proc/businessProcessExamples.d
 badd +163 config.d
 badd +17 proc/mod/parallelizeMod.d
-badd +278 proc/sim/token.d
+badd +135 proc/sim/token.d
 badd +18 proc/mod/modification.d
 badd +1 app.d
 badd +4 proc/agent.d
-badd +7 proc/sim/simulation.d
+badd +13 proc/sim/simulation.d
 argglobal
 silent! argdel *
+edit proc/sim/token.d
 set splitbelow splitright
 wincmd t
 set winminheight=0
@@ -41,8 +42,6 @@ set winheight=1
 set winminwidth=0
 set winwidth=1
 argglobal
-enew
-file NERD_tree_1
 setlocal fdm=manual
 setlocal fde=0
 setlocal fmr={{{,}}}
@@ -50,7 +49,14 @@ setlocal fdi=#
 setlocal fdl=0
 setlocal fml=1
 setlocal fdn=20
-setlocal nofen
+setlocal fen
+silent! normal! zE
+let s:l = 135 - ((19 * winheight(0) + 19) / 39)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+135
+normal! 0
 lcd ~/th/code/ares/source
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0
