@@ -48,7 +48,7 @@ class Simulator {
     bool allTokensStarted;
     do {
       allTokensStarted = tokenIdxStarted.length == sim.startTimePerToken.length;
-      if (all!(r => r.currState == Token.State.wait || r.currState == Token.State.join)(tokens_)) {
+      if (tokens_.all!(r => any!(a => a == r.currState)([Token.State.waitInFunc, Token.State.waitInQueue, Token.State.join]))) {
         if (!tokens_.empty) {
           print("TIME STEP: now=" ~ text(currentTime_));
 
@@ -101,7 +101,9 @@ class Simulator {
         case Token.State.end:
           onTokenEnd(i);
           break;
-        case Token.State.wait:
+        case Token.State.waitInFunc:
+          break;
+        case Token.State.waitInQueue:
           break;
         case Token.State.split:
           onTokenSplit(i);
