@@ -36,25 +36,24 @@ class WebService {
     SessionVar!(string, "dot") dot_;
     SessionVar!(DotGeneratorOptions, "dotGenOpts") dotGenOpts_;
     SessionVar!(size_t, "bpID") bpID_ = 0;
-  }
-
-  @noRoute {
-    @property BusinessProcess process() {
-      if (Sessions.get(sessionID_).bps.length <= bpID_)
-        throw new Exception("bpID " ~ bpID_.text ~ " not valid.");
-      return Sessions.get(sessionID_).bps[bpID_];
-    }
-
-    @property process(BusinessProcess bp) {
-      if (bpID_ >= processCount) {
-        bpID_ = processCount;
-        Sessions.get(sessionID_).bps ~= bp;
+    @noRoute {
+      @property BusinessProcess process() {
+        if (Sessions.get(sessionID_).bps.length <= bpID_)
+          throw new Exception("bpID " ~ bpID_.text ~ " not valid.");
+        return Sessions.get(sessionID_).bps[bpID_];
       }
-      Sessions.get(sessionID_).bps[bpID_] = bp;
-    }
 
-    @property size_t processCount() {
-      return Sessions.get(sessionID_).bps.length;
+      @property process(BusinessProcess bp) {
+        if (bpID_ >= processCount) {
+          bpID_ = processCount;
+          Sessions.get(sessionID_).bps ~= bp;
+        }
+        Sessions.get(sessionID_).bps[bpID_] = bp;
+      }
+
+      @property size_t processCount() {
+        return Sessions.get(sessionID_).bps.length;
+      }
     }
   }
 
@@ -134,8 +133,7 @@ class WebService {
       if (!dur.isNull) {
         el.asFunc.dur = dur;
       }
-    }
-    else if (el.isAgent) {
+    } else if (el.isAgent) {
       writeln("Changing qual/assignment of Agent ", id, ", QID=", qid, ", DID=", did);
       if (!qid.isNull)
         applyChange(el.asAgent.quals, qid);
@@ -143,8 +141,7 @@ class WebService {
         applyChange(el.deps, did);
         process.postProcess();
       }
-    }
-    else if (el.isGate) {
+    } else if (el.isGate) {
       writeln("Changing branch probs of Gate ", id, ", oid=", oid, ", newProb=", p);
       foreach (ref pe; el.asGate.probs)
         if (pe.eeID == oid)
@@ -183,8 +180,7 @@ class WebService {
       const auto fs = process.listAllFuncsBefore(el);
       // writeln("\n\nBWFORE: ", fs);
       json["beforeFuncs"] = fs;
-    }
-    else if (el.isAgent) {
+    } else if (el.isAgent) {
       ulong[] fs;
       foreach (eeID; process.epcElements.byKey())
         if (process.epcElements[eeID].isFunc)
@@ -200,15 +196,24 @@ class WebService {
     res.writeBody(cast(string) process.save(), "application/octet-stream");
   }
 
-  void postUpload(HTTPServerRequest req, HTTPServerResponse res) {
+  @method(HTTPMethod.POST) @path("/upload")
+  void upload(HTTPServerRequest req, HTTPServerResponse res) {
+    writeln(__LINE__);
     // File upload here
     auto file = "ares.bin" in req.files;
-    process = BusinessProcess.load(cast(ubyte[]) read(file.tempPath.toString));
+    try {
+      writeln(__LINE__);
+      process = BusinessProcess.load(cast(ubyte[]) read(file.tempPath.toString));
+      writeln(__LINE__);
 
-    // dot_ = generateDot(process, dotGenOpts_);
-    // getGraph(req, res, "dot");
+      // dot_ = generateDot(process, dotGenOpts_);
+      // getGraph(req, res, "dot");
 
-    getGraph(req, res, -1);
+      getGraph(req, res, -1);
+      writeln(__LINE__);
+    } catch (Throwable t) {
+      writeln("Err: " ~ t.text);
+    }
   }
 
   void getGraph(HTTPServerRequest req, HTTPServerResponse res, int id) {

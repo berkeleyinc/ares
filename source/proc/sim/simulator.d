@@ -48,12 +48,13 @@ class Simulator {
     bool allTokensStarted;
     do {
       allTokensStarted = tokenIdxStarted.length == sim.startTimePerToken.length;
-      if (tokens_.all!(r => any!(a => a == r.currState)([Token.State.waitInFunc, Token.State.waitInQueue, Token.State.join]))) {
+      if (tokens_.all!(r => any!(a => a == r.currState)([Token.State.waitInFunc,
+          Token.State.waitInQueue, Token.State.join]))) {
         if (!tokens_.empty) {
           print("TIME STEP: now=" ~ text(currentTime_));
 
           ulong incStep = 1;
-          if (allTokensStarted) { // TODO this should also work when not all tokens are started
+          if (allTokensStarted) { // TODO this should also work when not all tokens are started but doesn't because we might skip the creation time of a new token
 
             ulong minContinueDiff = 0;
             foreach (r; tokens_) {
@@ -63,10 +64,12 @@ class Simulator {
             }
 
             if (minContinueDiff > 0) {
-              assert(minContinueDiff >= currentTime_);
+              assert(minContinueDiff >= currentTime_, "expected " ~ minContinueDiff.text ~ " >= " ~ currentTime_.text);
               minContinueDiff -= currentTime_;
             }
 
+            //assert (minContinueDiff == 0);
+            // incStep = minContinueDiff;
             incStep = max(1, minContinueDiff);
             // if (incStep > 1)
             // writeln("minContinueDiff=", minContinueDiff);
@@ -87,7 +90,8 @@ class Simulator {
         }
         for (int i = 0; i < sim.startTimePerToken.length; i++) {
           if (currentTime_ >= sim.startTimePerToken[i].time && !tokenIdxStarted.canFind(i)) {
-            tokens_ ~= new Token(&print, fnOnStartFunction, sim.startTimePerToken[i].tid, proc_, queue_, startEE.id, endID);
+            tokens_ ~= new Token(&print, fnOnStartFunction, sim.startTimePerToken[i].tid, proc_,
+                queue_, startEE.id, endID);
             tokenIdxStarted ~= i;
             // sim.startTimePerToken = sim.startTimePerToken.remove(i);
             // i--;
@@ -116,7 +120,7 @@ class Simulator {
         }
       }
 
-      if (++maxTime > 10000) {//  return currentTime_;
+      if (++maxTime > 10000) { //  return currentTime_;
         // import std.file;
         // import graphviz.dotGenerator;
 
@@ -154,7 +158,7 @@ private:
   ptrdiff_t[] foundSOIdcs_;
 
   void print(string msg) {
-    // writeln(msg);
+   writeln(msg);
   }
 
   // string[size_t] tokenResults_;
@@ -198,11 +202,11 @@ private:
           }
           nepLoop: for (int i = 0; i < nonExistantPaths.length; i++) {
             foreach (s; r.currEE.succs) {
-              immutable bool exists = any!(ss => ss == nonExistantPaths[i])(proc_.listAllObjsAfter(proc_.epcElements[s],
-                  typeid(EE)));
-               // if (!exists)
-               //   writeln(r.str ~ " ==> nep_i=", nonExistantPaths[i], ", listAllObjsAfter(", proc_(s)
-               //       .name, ")=", proc_.listAllObjsAfter(proc_(s), typeid(EE)));
+              immutable bool exists = any!(ss => ss == nonExistantPaths[i])(
+                  proc_.listAllObjsAfter(proc_.epcElements[s], typeid(EE)));
+              // if (!exists)
+              //   writeln(r.str ~ " ==> nep_i=", nonExistantPaths[i], ", listAllObjsAfter(", proc_(s)
+              //       .name, ")=", proc_.listAllObjsAfter(proc_(s), typeid(EE)));
               if (exists) {
                 existantPaths ~= s;
                 nonExistantPaths = nonExistantPaths.remove(i--);
@@ -215,7 +219,8 @@ private:
           if (!nonExistantPaths.empty) {
             // import graphviz.dotGenerator;
             // generateDot(proc_);
-            throw new Exception(r.str ~ " ==> nonExistantPaths=" ~ text(nonExistantPaths) ~ "\nProbably wrong loading order of BPs");
+            throw new Exception(r.str ~ " ==> nonExistantPaths=" ~ text(
+                nonExistantPaths) ~ "\nProbably wrong loading order of BPs");
           }
           // assert(nonExistantPaths.empty, r.str ~ " ==> nonExistantPaths=" ~ text(nonExistantPaths));
           splits = existantPaths;
@@ -293,8 +298,7 @@ private:
     immutable bool isOr = r.currEE.asGate.type == Gate.Type.or;
     immutable bool isXor = r.currEE.asGate.type == Gate.Type.xor;
     immutable bool isAnd = (cast(Gate) r.currEE).type == Gate.Type.and;
-    immutable auto tokensAtThisPos = tokens_.fold!((a, b) => r.id == b.id && b.currEE.id == r.currEE.id ? a + 1 : a)(
-        0);
+    immutable auto tokensAtThisPos = tokens_.fold!((a, b) => r.id == b.id && b.currEE.id == r.currEE.id ? a + 1 : a)(0);
 
     size_t desiredTokensCount;
     if (isAnd)

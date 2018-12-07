@@ -9,32 +9,33 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +1 proc/mod/businessProcessModifier.d
-badd +343 proc/sim/simulator.d
-badd +80 proc/mod/assignMod.d
-badd +92 proc/mod/moveMod.d
-badd +36 proc/sim/pathFinder.d
-badd +237 proc/businessProcess.d
+badd +141 proc/mod/businessProcessModifier.d
+badd +238 proc/sim/simulator.d
+badd +69 proc/mod/assignMod.d
+badd +75 proc/mod/moveMod.d
+badd +136 proc/sim/pathFinder.d
+badd +1 proc/businessProcess.d
 badd +130 proc/businessProcessGenerator.d
-badd +303 web/service.d
+badd +38 web/service.d
 badd +314 ~/th/code/ares/public/js/site.js
 badd +1 proc/epcElement.d
 badd +1 graphviz/dotGenerator.d
 badd +1 proc/event.d
 badd +1 proc/func.d
 badd +41 proc/gate.d
-badd +64 proc/sim/multiple.d
+badd +39 proc/sim/multiple.d
 badd +12 proc/businessProcessExamples.d
-badd +163 config.d
-badd +17 proc/mod/parallelizeMod.d
-badd +135 proc/sim/token.d
+badd +41 config.d
+badd +142 proc/mod/parallelizeMod.d
+badd +50 proc/sim/token.d
 badd +18 proc/mod/modification.d
 badd +1 app.d
 badd +4 proc/agent.d
 badd +13 proc/sim/simulation.d
+badd +38 web/sessions.d
 argglobal
 silent! argdel *
-edit proc/sim/token.d
+edit config.d
 set splitbelow splitright
 wincmd t
 set winminheight=0
@@ -51,11 +52,11 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 135 - ((20 * winheight(0) + 22) / 44)
+let s:l = 41 - ((20 * winheight(0) + 21) / 42)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-135
+41
 normal! 0
 lcd ~/th/code/ares/source
 tabnext 1

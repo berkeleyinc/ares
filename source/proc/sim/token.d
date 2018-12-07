@@ -127,7 +127,7 @@ class Token {
   }
 
   @property ulong continueTime() {
-    if (currState != State.waitInFunc && currState != State.waitInQueue)
+    if (currState != State.waitInFunc)
       return 0;
     return continueTime_;
   }
@@ -221,7 +221,8 @@ private:
 
   State getState() {
     if (currEE.isFunc) {
-      if (currEE.asFunc.agts.any!(a => a !in *queue_ || (*queue_)[a].empty)) //currEE.id !in (*queue_) || (*queue_)[currEE.id].empty)
+      if ((currEE.id !in (*queue_) || (*queue_)[currEE.id].empty)
+          && currEE.asFunc.agts.any!(a => a !in *queue_ || (*queue_)[a].empty)) //currEE.id !in (*queue_) || (*queue_)[currEE.id].empty)
         foreach (aid; currEE.asFunc.agts) {
           if (aid !in *queue_ || (*queue_)[aid].empty) {
             startFunction(aid);

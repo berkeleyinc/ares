@@ -150,6 +150,7 @@ private:
         continue;
       }
 
+
       checkNewModsLoop: foreach (m; pms) {
         foreach (mod; sourceBPMod.mods)
           if (m.toHash == mod.toHash)
@@ -167,12 +168,12 @@ private:
         //   times ~= sor.simulate(sim);
         // double time = times[].mean;
         // writeln("DONE, ", time);
-        if (sourceBPMod.runtime == 0 || time <= sourceBPMod.runtime) {
+        //if (sourceBPMod.runtime == 0 || time <= sourceBPMod.runtime)
+        {
 
-          // if (time < sourceBPMod.runtime
-
-          if (time == sourceBPMod.runtime && sourceBPMod.sameTimeCount >= 5) {
-          } else {
+          // if (time == sourceBPMod.runtime && sourceBPMod.sameTimeCount >= 5) {
+          // } else
+          {
             // Simulation[] newSims;
             // MultiSimulator.allPathSimulate(sor, p, defSim, newSims);
             if (time == sourceBPMod.runtime)
