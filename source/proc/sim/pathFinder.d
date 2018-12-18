@@ -88,9 +88,10 @@ private:
       path.allIDs ~= ee.id;
       path.time += (cast(Function) ee).dur;
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
-      if (!ee.succs.empty && !path.allIDs.canFind(ee.succs[0]) && canFindPaths(ee.succs[0], ee.id))
+      if (!ee.succs.empty && !path.allIDs.canFind(ee.succs[0]) && canFindPaths(ee.succs[0], ee.id)) {
         findPaths(ee.succs[0], path, subPath, stopOn);
-      else {
+        return;
+      } else {
         paths_ ~= path;
         return;
       }
@@ -104,8 +105,6 @@ private:
       //if (path.allIDs.find(bo.succs[0]).length <= 1)
       if (!path.allIDs.canFind(ee.succs[0]) && canFindPaths(ee.succs[0], ee.id)) {
         findPaths(ee.succs[0], path, subPath, stopOn);
-      } else {
-        paths_ ~= path;
         return;
       }
     } else if (ee.isGate) {
@@ -121,6 +120,7 @@ private:
           //if (process_(o).succs.any!(sg => process_(sg).isGate && process_(sg).asGate.loopsFor.canFind(o))) {
           if (!canFindPaths(o, ee.id)) {
             writeln("SKIPPING LOOP");
+            paths_ ~= path;
             continue;
           }
           Path newPath = path;
@@ -145,6 +145,7 @@ private:
 
           if (!canFindPaths(lastEE.succs[0], lastEE.id)) {
             writeln("SKIPPING LOOP 2");
+            paths_ ~= path;
             //continue;
           } else
             findPaths(lastEE.succs[0], path, subPath + 1, stopOn);
@@ -163,16 +164,21 @@ private:
             }
           }
         }
+        return;
       } else {
         // writeln(bo.name ~ ", subPath=" ~ text(subPath));
-        if (stopOn > 0 && stopOn == subPath)
-          return;
-        else {
+        if (stopOn > 0 && stopOn == subPath) {
+        } else {
 
-          if (canFindPaths(ee.succs[0], ee.id))
+          if (canFindPaths(ee.succs[0], ee.id)) {
             findPaths(ee.succs[0], path, subPath - 1, stopOn);
+            return;
+          }
         }
       }
     }
+
+    paths_ ~= path;
+    return;
   }
 }

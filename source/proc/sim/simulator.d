@@ -121,11 +121,11 @@ class Simulator {
       }
 
       if (++maxTime > 10000) { //  return currentTime_;
-        // import std.file;
-        // import graphviz.dotGenerator;
-
-        // string dot = generateDot(proc_);
-        // write("/tmp/graph_break.dot", dot);
+        import std.file;
+        import web.dotGenerator;
+        string dot = generateDot(proc_);
+        write("/tmp/graph_break.dot", dot);
+        write("/tmp/graph_break.bin", proc_.save());
 
         throw new Exception("Error-Simulator: break condition not met");
       }
@@ -241,12 +241,16 @@ private:
           double total = cast(double) perm.fold!(delegate(t, eeID) {
             if (r.currEE.asGate.probs.canFind!(prob => prob.eeID == eeID))
               return t + r.currEE.asGate.probs.find!(prob => prob.eeID == eeID)[0].prob;
-            else
-              return t + (connProbsSet ? 0.0 : 1.0);
+            else {
+            // TODO this shouldnt happen, postProcess has to fix probs after restructuring
+              return t + 1.0; //(connProbsSet ? 0.0 : 1.0); 
+              }
           })(0.0);
           probs ~= [total / cast(double) perm.length];
           // writeln("perm=", perm, ", total=", total);
         }
+
+        // TODO probs of eeID arent passed when restructuring
 
         // writeln("succs: ", r.currEE.succs);
         // writeln("perms: ", perms);
@@ -256,7 +260,11 @@ private:
         splits = perms[dice(probs)].array.dup;
 
         // splits = array(randomSample(r.currEE.succs, isXor ? 1 : uniform!"[]"(1, r.currEE.succs.length)));
-        print(r.str ~ ", Chosen splits: " ~ text(splits));
+        print(r.str ~ ", Chosen splits: " ~ text(splits) ~ ", succs=" ~ text(r.currEE.succs) ~ ", probs=" ~ text(probs));
+
+        // import std.file;
+        // write("/tmp/graph_break2.bin", proc_.save());
+
         psim_.fos ~= [Simulation.SplitOption(r.id, r.currEE.id, splits.dup)];
       }
     }

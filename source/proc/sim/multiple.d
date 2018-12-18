@@ -55,7 +55,7 @@ class MultiSimulator {
       throw new Exception("PathFinder couldn't find any paths");
 
     foreach (ref p; paths) {
-      import opmix.dup; 
+      import util; 
       Simulation sim = defSim.gdup;
       Simulation.SplitOption[] sos;
       foreach (i, ee; p) {

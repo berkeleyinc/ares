@@ -210,6 +210,7 @@ function requestGeneration() {
   $('#vizTabsContent').children().remove();
   $('#vizTabsContent').append(firstCont[0].outerHTML);
 
+  // $.get('/gen?multi=true', null, function (data) {
   $.get('/gen', null, function (data) {
     // addVizTab();
     // setLog(''); //data.log);

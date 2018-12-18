@@ -15,12 +15,12 @@ import std.datetime.stopwatch : AutoStart, StopWatch;
 import std.range : iota;
 
 import web.sessions;
-import graphviz.dotGenerator;
+import web.dotGenerator;
+
+import test.businessProcessExamples;
+import gen = test.businessProcessGenerator;
 
 import proc.businessProcess;
-import proc.businessProcessExamples;
-
-import gen = proc.businessProcessGenerator;
 import proc.sim.simulator;
 import proc.sim.simulation;
 import proc.mod.businessProcessModifier;
@@ -64,12 +64,12 @@ class WebService {
       logInfo("creating new Session " ~ sessionID_);
       Sessions.create(sessionID_);
       // Sessions.get(sessionID_).bps = [];
-      //process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
-      //process = gen.BusinessProcessGenerator.generate();
+      // process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+      // process = gen.BusinessProcessGenerator.generate();
 
       auto p = assignAgentExample(false);
 
-      //auto p = dilemmaExample();
+      // auto p = dilemmaExample();
 
       process = p;
 
@@ -81,8 +81,7 @@ class WebService {
     render!("index.dt", bpCount, sessionCount);
   }
 
-  @method(HTTPMethod.GET) @path("/new_session")
-  void resetSession(HTTPServerRequest req, HTTPServerResponse res) {
+  @method(HTTPMethod.GET) @path("/new_session") void resetSession(HTTPServerRequest req, HTTPServerResponse res) {
     Sessions.terminateSessions(); // this resets all sessions
 
     if (req.session)
@@ -98,8 +97,8 @@ class WebService {
     res.writeBody(process.toString(), "application/json");
   }
 
-  @method(HTTPMethod.GET) @path("/set_config")
-  void setConfig(HTTPServerRequest req, HTTPServerResponse res, string key, string val) {
+  @method(HTTPMethod.GET)
+  @path("/set_config") void setConfig(HTTPServerRequest req, HTTPServerResponse res, string key, string val) {
     writeln(__FUNCTION__, ": key=", key, ", val=", val);
     if (val.length > 42)
       throw new Exception("Value too long");
@@ -111,9 +110,9 @@ class WebService {
     res.writeBody("OK", "text/plain");
   }
 
-  @method(HTTPMethod.GET) @path("/set_object_config")
-  void setObjectConfig(HTTPServerRequest req, HTTPServerResponse res, ulong id, Nullable!int did,
-      Nullable!int dur, Nullable!int qid, Nullable!double p, Nullable!ulong oid) {
+  @method(HTTPMethod.GET)
+  @path("/set_object_config") void setObjectConfig(HTTPServerRequest req, HTTPServerResponse res,
+      ulong id, Nullable!int did, Nullable!int dur, Nullable!int qid, Nullable!double p, Nullable!ulong oid) {
     auto el = process.epcElements[id];
 
     void applyChange(ref ulong[] arr, ulong id) {
@@ -191,13 +190,11 @@ class WebService {
     res.writeBody(json.toString(), "application/json");
   }
 
-  @method(HTTPMethod.GET) @path("/download/ares.bin")
-  void download(HTTPServerRequest req, HTTPServerResponse res) {
+  @method(HTTPMethod.GET) @path("/download/ares.bin") void download(HTTPServerRequest req, HTTPServerResponse res) {
     res.writeBody(cast(string) process.save(), "application/octet-stream");
   }
 
-  @method(HTTPMethod.POST) @path("/upload")
-  void upload(HTTPServerRequest req, HTTPServerResponse res) {
+  @method(HTTPMethod.POST) @path("/upload") void upload(HTTPServerRequest req, HTTPServerResponse res) {
     writeln(__LINE__);
     // File upload here
     auto file = "ares.bin" in req.files;
@@ -228,8 +225,8 @@ class WebService {
     dot_ = generateDot(process, dotGenOpts_);
   }
 
-  @method(HTTPMethod.GET) @path("/set/dot")
-  void setDotOption(HTTPServerRequest req, HTTPServerResponse res, DotGeneratorOptions opts) {
+  @method(HTTPMethod.GET)
+  @path("/set/dot") void setDotOption(HTTPServerRequest req, HTTPServerResponse res, DotGeneratorOptions opts) {
 
     const Session session = req.session;
     if (!session) {
@@ -244,8 +241,7 @@ class WebService {
     res.writeBody("OK", "text/plain");
   }
 
-  @method(HTTPMethod.GET) @path("/clone")
-  void clone(HTTPServerRequest req, HTTPServerResponse res) {
+  @method(HTTPMethod.GET) @path("/clone") void clone(HTTPServerRequest req, HTTPServerResponse res) {
     logInfo(__FUNCTION__);
     auto baseBP = process;
     bpID_ = processCount;
@@ -254,8 +250,7 @@ class WebService {
     res.writeBody(dot_, "text/plain");
   }
 
-  @method(HTTPMethod.GET) @path("/res")
-  void restructureBusinessProcess(HTTPServerRequest req, HTTPServerResponse res) {
+  @method(HTTPMethod.GET) @path("/res") void restructureBusinessProcess(HTTPServerRequest req, HTTPServerResponse res) {
     logInfo(__FUNCTION__);
     // auto newBusinessProcess = process.clone();
 
@@ -281,25 +276,57 @@ class WebService {
     res.writeBody(json.toString(), "application/json");
   }
 
-  @method(HTTPMethod.GET) @path("/gen")
-  void generateBusinessProcess(HTTPServerRequest req, HTTPServerResponse res) {
+  @method(HTTPMethod.GET)
+  @path("/gen") void generateBusinessProcess(HTTPServerRequest req, HTTPServerResponse res, Nullable!bool multi) {
     logInfo(__FUNCTION__);
     bpID_ = 0;
     sessionID_ = req.session.id;
     Sessions.get(req.session.id).bps = [];
     // Sessions.get().bpsBySid[req.session.id].clear();
 
-    process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
-    dot_ = generateDot(process, dotGenOpts_);
-    JSONValue json;
-    json["log"] = "Created " ~ text(process.funcs.length) ~ " Functions, " ~ text(
-        process.gates.length) ~ " Gates and " ~ text(process.agts.length) ~ " Agents.";
-    json["dot"] = dot_.dup;
-    res.writeBody(json.toString(), "application/json");
+    void fn_exitScope() {
+      JSONValue json;
+      dot_ = generateDot(process, dotGenOpts_);
+      json["log"] = "Created " ~ text(process.funcs.length) ~ " Functions, " ~ text(
+          process.gates.length) ~ " Gates and " ~ text(process.agts.length) ~ " Agents.";
+      json["dot"] = dot_.dup;
+      res.writeBody(json.toString(), "application/json");
+    }
+
+    scope (exit)
+      fn_exitScope();
+
+    if (!multi.isNull() && multi) {
+      BusinessProcess tmpProc;
+      try {
+        const size_t tokenCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parTokensPerSim].as!size_t;
+        const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenTokenStarts].as!ulong;
+        Simulation defSim = Simulation.construct(tokenCount, timeBetween);
+
+        while (true) {
+          tmpProc = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+
+          string result;
+          auto m = new BusinessProcessModifier(tmpProc, defSim);
+          auto newProcs = m.modify(result);
+        }
+      } catch (Throwable t) {
+        process = tmpProc;
+        fn_exitScope();
+        throw t;
+      }
+    } else
+      process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
   }
 
-  @method(HTTPMethod.GET) @path("/sim/start")
-  void startSimulation(HTTPServerRequest req, HTTPServerResponse res) {
+  @method(HTTPMethod.GET) @path("/test") void testRestructure(HTTPServerRequest req, HTTPServerResponse res) {
+    bpID_ = 0;
+    sessionID_ = req.session.id;
+    Sessions.get(req.session.id).bps = [];
+    process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+  }
+
+  @method(HTTPMethod.GET) @path("/sim/start") void startSimulation(HTTPServerRequest req, HTTPServerResponse res) {
     logInfo(__FUNCTION__);
 
     const size_t simCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_simsPerBP].as!size_t;
@@ -316,7 +343,7 @@ class WebService {
 
     auto sw = StopWatch(AutoStart.yes);
     foreach (i; 0 .. simCount) {
-      import opmix.dup;
+      import util;
 
       Simulation sim = defSim.gdup;
       Simulator sor = new Simulator(null);
@@ -328,6 +355,8 @@ class WebService {
         // result ~= "BP " ~ text(bpID) ~ "\n";
         sor.process = bp;
         auto timeTaken = sor.simulate(sim);
+        // import proc.sim.multiple;
+        // ulong timeTaken = cast(ulong) MultiSimulator.allPathSimulate(sor, bp, defSim);
         synchronized {
           times[bpID] += timeTaken;
         }

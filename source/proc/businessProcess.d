@@ -155,6 +155,16 @@ class BusinessProcess {
 
   void postProcess() {
 
+    {
+      auto last = epcElements[getStartId()];
+      if (typeid(last) != typeid(Event)) {
+        auto evt = new Event;
+        add([], evt);
+        last.deps ~= evt.id;
+        // evt.name = "start";
+      }
+    }
+
     void updateSuccs() {
       // fill EE.succs
       foreach (ref eePair; epcElements.byKeyValue()) {
@@ -193,6 +203,7 @@ class BusinessProcess {
       foreach (cs; c.succs) {
         if (c.type != Gate.Type.and && !c.probs.canFind!(a => a.eeID == cs))
           c.probs ~= tuple!("eeID", "prob")(cs, 1.0);
+        // TODO back propagation of probs 
       }
 
       // TODO there has to be a better way
@@ -312,11 +323,11 @@ class BusinessProcess {
       // assert(c.succs.length == epcElements[checkArr[0]].deps.length, "Didn't find the right partner Gate for " ~ c.name);
     }
 
-      import std.file;
-      import graphviz.dotGenerator;
+    // import std.file;
+    // import graphviz.dotGenerator;
 
-      string doto = generateDot(this);
-      write("/tmp/graph2.dot", doto);
+    // string doto = generateDot(this);
+    // write("/tmp/graph2.dot", doto);
     auto removeGateIDs = tuple!(long, long)(-1, -1);
     do {
       if (removeGateIDs[0] >= 0) {
@@ -330,7 +341,6 @@ class BusinessProcess {
         updateSuccs();
         // return;
       }
-
 
       gateRemover: foreach (leftIDX, ref left; gates) {
         if (left.type != Gate.Type.and || left.partner.isNull || left.succs.length <= 1)
@@ -346,7 +356,7 @@ class BusinessProcess {
           auto outerPartner = epcElements[left.partner].asGate;
           auto innerPartner = epcElements[right.partner].asGate;
 
-          assert (outerPartner.type == Gate.Type.and && innerPartner.type == Gate.Type.and);
+          assert(outerPartner.type == Gate.Type.and && innerPartner.type == Gate.Type.and);
 
           assert(innerPartner.succs.length == 1);
           assert(outerPartner.succs.length == 1);
@@ -389,10 +399,11 @@ class BusinessProcess {
     }
     while (removeGateIDs[0] != -1);
 
-      import std.file;
-      import graphviz.dotGenerator;
-    string dot = generateDot(this);
-    write("/tmp/graph3.dot", dot);
+    // import std.file;
+    // import graphviz.dotGenerator;
+
+    // string dot = generateDot(this);
+    // write("/tmp/graph3.dot", dot);
 
   }
 
@@ -455,7 +466,9 @@ private:
         if (allIDs.canFind(d))
           continue;
         if (!before && epcElements[d].isGate && epcElements[d].asGate.loopsFor.canFind(curr.id) //
+
           
+
             || before && curr.isGate && curr.asGate.loopsFor.canFind(d)) //continue;
           contGetObjs = false;
         // if (d == ee.id)

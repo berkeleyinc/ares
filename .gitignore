@@ -7,6 +7,7 @@ ares.dylib
 ares.dll
 ares.a
 ares.lib
+ares-bin*
 ares-test-*
 *.exe
 *.o

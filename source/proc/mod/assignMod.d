@@ -40,8 +40,7 @@ import std.stdio;
 import std.range;
 import std.conv;
 
-import util : mean;
-import opmix.dup;
+import util;
 
 private class AssignModFactory {
   this(const BusinessProcess p) {
