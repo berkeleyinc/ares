@@ -6,7 +6,7 @@ public import proc.agent;
 public import proc.event;
 public import proc.gate;
 
-import std.algorithm : canFind, sort, uniq, remove, each, find;
+import std.algorithm : canFind, sort, uniq, remove, each, find, SwapStrategy;
 import std.algorithm.setops : setIntersection;
 import std.stdio : writeln;
 import std.conv : text;
@@ -32,6 +32,16 @@ class BusinessProcess {
         return o.id;
     }
     assert(0, "No startObject found");
+  }
+
+  ulong getEndId() const {
+    // find START object
+    foreach (o; epcElements.byValue()) {
+      // it's the Object that has no dependent objects
+      if (!o.isAgent && o.succs.empty)
+        return o.id;
+    }
+    assert(0, "No endObject found");
   }
 
   ulong[] getEndIds() const {
@@ -87,17 +97,16 @@ class BusinessProcess {
       // }
 
       // between two processes, there has to be an event
-      if (matches.length > 0 && typeid(matches[0]) != typeid(Event)) {
+      if (matches.length > 0 && !matches[0].isEvent) {
         // writeln("Creating in-between Event for " ~ matches[0].name ~ " and " ~ text(obj.name));
-        auto evt = new Event;
-        add([], evt);
-        foreach (m; matches) {
-          if (typeid(m) == typeid(Function))
-            epcElements[evt.id] = evt;
+        if (matches[0].isGate && matches[0].asGate.type == Gate.Type.and) {
+          // evt.deps = [obj.id];
+        } else {
+          auto evt = new Event;
+          add([], evt);
+          evt.deps = deps;
+          obj.deps = [evt.id];
         }
-        evt.deps = deps;
-        // evt.deps = matches;
-        obj.deps = [evt.id];
       }
     } else static if (is(T == Agent))
       agts ~= obj;
@@ -106,6 +115,12 @@ class BusinessProcess {
     else static if (is(T == Gate))
       gates ~= obj;
     return obj;
+  }
+
+  void saveToFile(string fileName = "bp.bin") const {
+    import std.file;
+
+    write("/tmp/" ~ fileName, save());
   }
 
   ubyte[] save() const {
@@ -154,15 +169,8 @@ class BusinessProcess {
   }
 
   void postProcess() {
-
-    {
-      auto last = epcElements[getStartId()];
-      if (typeid(last) != typeid(Event)) {
-        auto evt = new Event;
-        add([], evt);
-        last.deps ~= evt.id;
-        // evt.name = "start";
-      }
+    scope (exit) {
+      saveToFile("graph_after_process.bin");
     }
 
     void updateSuccs() {
@@ -177,234 +185,258 @@ class BusinessProcess {
       }
     }
 
-    updateSuccs();
-
-    // set Function.agts 
-    foreach (f; funcs) {
-      ulong[] ps;
-      foreach (p; agts)
-        if (p.deps.canFind(f.id))
-          ps ~= p.id;
-      f.agts = ps;
-    }
-
-    // set Agent.quals
-    foreach (ref p; agts) {
-      foreach (pd; p.deps) {
-        if (!p.quals.canFind(pd))
-          p.quals ~= pd;
-      }
-    }
-
-    // set Gate.probs
-    foreach (ref c; gates) {
-      if (c.succs.length < 2)
-        continue;
-      foreach (cs; c.succs) {
-        if (c.type != Gate.Type.and && !c.probs.canFind!(a => a.eeID == cs))
-          c.probs ~= tuple!("eeID", "prob")(cs, 1.0);
-        // TODO back propagation of probs 
-      }
-
-      // TODO there has to be a better way
-      bool removed;
-      do {
-        removed = false;
-        foreach (i, cp; c.probs) {
-          if (!c.succs.canFind(cp.eeID)) {
-            c.probs = c.probs.remove(i);
-            removed = true;
-            break;
-          }
-        }
-      }
-      while (removed);
-    }
-
-    import std.range : enumerate;
-    import std.algorithm : minElement, map;
-    import std.typecons : Tuple;
-
-    // identify Gate loops
-    foreach (ref c; gates) {
-      immutable bool isSplit = c.succs.length > 1;
-      if (isSplit || c.type != Gate.Type.xor)
-        continue;
-
-      auto tillObjs = listAllObjsAfter(c, typeid(EE));
-      writeln("listAllAfter for ", c.name, ": ", tillObjs);
-
-      foreach (i, cs; c.deps) {
-        if (tillObjs.canFind(cs) && epcElements[cs].succs.canFind(c.id)) {
-          writeln(c.name ~ " has loop branch " ~ epcElements[cs].name);
-          c.loopsFor ~= cs;
-        }
-      }
-    }
-
-    // find Gate partners
-    import util;
-
-    gates.each!(c => c.partner.nullify());
-    foreach (ref c; gates) {
-      immutable bool isSplit = c.succs.length > 1;
-      if (!isSplit || c.type == Gate.Type.xor)
-        continue;
-      Tuple!(size_t, "index", ulong, "value")[] checkArr;
-      auto allAfter = c.succs.map!(cs => listAllObjsAfter(epcElements[cs], typeid(Gate))).array;
-      writeln("allAfter for each succ of ", c.name, ": ", allAfter);
-      // ulong[][] cmbs;
-      // for (size_t i = c.succs.length; i >= 2; i--)
-      //   cmbs ~= comb(c.succs, i);
-      // writeln("cmbs: ", cmbs);
-      // foreach (i, cs; c.succs) {
-      //   foreach (j, afterObj; allAfter[i]) {
-      //   }
-      // }
-
-      //foreach (cmb; cmbs) {
-      typeof(checkArr)[] afterConnsPerBranch;
-      foreach (i, cs; c.succs) {
-        // if (c.loopsFor.canFind(cs))
-        //   continue;
-        // listAllObjs preserves the order of found objects but for setIntersection, we need to sort the input arrays
-        // to later restore the original found-order, we enumerate the results 
-        auto branchObjs = allAfter[i].remove!(a => a == c.id || epcElements[a].asGate.type != c.type
-            || !epcElements[a].asGate.partner.isNull); // listAllObjs(epcElements[cs], typeid(Gate), false);
-        // if (branchObjs.canFind(cs)) {
-        //   epcElements[cs].asGate.loopsFor ~= cs;
-        //   continue;
-        // }
-        afterConnsPerBranch ~= [branchObjs.enumerate.array.sort!"a.value < b.value".array];
-        if (i > 0)
-          checkArr = setIntersection!"a.value < b.value"(afterConnsPerBranch[i], checkArr).array;
-        else
-          checkArr = afterConnsPerBranch[0];
-      }
-      //   break;
-      // if (!checkArr.empty) {
-      //   checkArr = checkArr.sort!"a.index < b.index".array;
-      //   writeln("cmb worked: ", cmb, " with ", checkArr.map!"a.value");
-      //   break;
-      // }
-      //}
-      // writeln("For ", c.name, ": ", afterConnsPerBranch);
-      // XXX only with xor Gates you can build non-hierarchical layouts
-      if (checkArr.empty) {
-        throw new Exception("Can't find partner for " ~ c.name);
-      }
-      // assert(!checkArr.empty);
-      if (checkArr.empty) {
-        // writeln(c.name ~ " allAfter: ", allAfter);
-        continue;
-      }
-      // checkArr = checkArr.sort!"a.index < b.index".array;
-      // sizediff_t i = 0;
-      // c.partner = checkArrs[i].value;
-      // while (c.partner == c.id || !epcElements[c.partner].asGate.partner.isNull) {
-      //   if (i + 1 == checkArrs.length) {
-      //     writeln("checkArrs: ", checkArrs.map!(kv => kv.value));
-      //     throw new Exception("Could not find partner for " ~ c.name);
-      //   }
-      //   c.partner = checkArrs[++i].value; // 
-      // }
-      c.partner = checkArr.minElement!"a.index < b.index".value;
-      // writeln("PARTNER FOR " ~ c.name ~ " is G" ~ c.partner.text);
-      // if (c.id == c.partner)
-      //   throw new Exception(c.name ~ " can't have itself as partner.");
-      // if (!epcElements[c.partner].asGate.partner.isNull) {
-      //   throw new Exception("C" ~ text(c.partner) ~ " has already C" ~ text(
-      //       epcElements[c.partner].asGate.partner.get) ~ " -- couldn't find partner for " ~ c.name ~ ".");
-      // }
-      epcElements[c.partner].asGate.partner = c.id;
-
-      // writeln("c.succs=", c.succs, ", checkArr.deps=", epcElements[checkArr[0]].deps);
-      // XXX this happens when there is an additional edge to a join (e.g. part of a loop)
-      // assert(c.succs.length == epcElements[checkArr[0]].deps.length, "Didn't find the right partner Gate for " ~ c.name);
-    }
-
-    // import std.file;
-    // import graphviz.dotGenerator;
-
-    // string doto = generateDot(this);
-    // write("/tmp/graph2.dot", doto);
-    auto removeGateIDs = tuple!(long, long)(-1, -1);
-    do {
-      if (removeGateIDs[0] >= 0) {
-        foreach (removeGateID; [removeGateIDs[0], removeGateIDs[1]].sort!"a > b") {
-          auto id = gates[removeGateID].id;
-          gates = gates.remove!(SwapStrategy.unstable)(removeGateID);
-          writeln("Removing EPC_Element ", id, ", with deps=", epcElements[id].deps);
-          epcElements.remove(id);
-        }
-        removeGateIDs[0] = -1;
-        updateSuccs();
-        // return;
-      }
-
-      gateRemover: foreach (leftIDX, ref left; gates) {
-        if (left.type != Gate.Type.and || left.partner.isNull || left.succs.length <= 1)
+    void identifyGateLoops() {
+      // identify Gate loops
+      foreach (ref c; gates) {
+        immutable bool isSplit = c.succs.length > 1;
+        if (isSplit || c.type != Gate.Type.xor)
           continue;
 
-        foreach (rightID; left.succs) { // TODO also for deps
-          if (!epcElements[rightID].isGate)
-            continue;
-          auto right = epcElements[rightID].asGate;
-          if (right.type != Gate.Type.and || right.partner.isNull || right.succs.length <= 1)
-            continue;
+        auto tillObjs = listAllObjsAfter(c, typeid(EE));
+        // writeln("listAllAfter for ", c.name, ": ", tillObjs);
 
-          auto outerPartner = epcElements[left.partner].asGate;
-          auto innerPartner = epcElements[right.partner].asGate;
-
-          assert(outerPartner.type == Gate.Type.and && innerPartner.type == Gate.Type.and);
-
-          assert(innerPartner.succs.length == 1);
-          assert(outerPartner.succs.length == 1);
-
-          // innerPartner.deps = outerPartner.deps.dup;
-
-          if (!outerPartner.deps.canFind(innerPartner.id))
-            continue;
-
-          writeln(left.id, ", left.deps=", left.deps, ", outer.deps=", outerPartner.deps);
-          writeln(outerPartner.id, ", left.succs=", left.succs, ", outer.succs=", outerPartner.succs);
-
-          right.deps = left.deps.dup; // OK
-          foreach (s; left.succs)
-            if (s != rightID)
-              epcElements[s].deps = epcElements[s].deps.remove!(a => epcElements[a].id == left.id) ~ [rightID].dup; // OK
-          removeGateIDs[0] = leftIDX;
-
-          if (!outerPartner.succs.empty) {
-            auto outerSucc = epcElements[outerPartner.succs[0]];
-            outerSucc.deps = outerSucc.deps.remove!(a => epcElements[a].id == outerPartner.id);
-            outerSucc.deps ~= innerPartner.id;
+        foreach (i, cs; c.deps) {
+          if (tillObjs.canFind(cs) && epcElements[cs].succs.canFind(c.id)) {
+            // writeln(c.name ~ " has loop branch " ~ epcElements[cs].name);
+            c.loopsFor ~= cs;
           }
-          foreach (depID; outerPartner.deps)
-            if (depID != innerPartner.id)
-              innerPartner.deps ~= depID; // OK
-
-          foreach (outerIDX, ref gate; gates)
-            if (outerPartner.id == gate.id) {
-              removeGateIDs[1] = outerIDX;
-              break;
-            }
-          updateSuccs();
-          writeln(right.id, ", right.deps=", right.deps, ", inner.deps=", innerPartner.deps);
-          writeln(innerPartner.id, ", right.succs=", right.succs, ", inner.succs=", innerPartner.succs);
-
-          break gateRemover;
         }
       }
     }
-    while (removeGateIDs[0] != -1);
 
-    // import std.file;
-    // import graphviz.dotGenerator;
+    void setGateProbs() {
+      // set Gate.probs
+      foreach (ref c; gates) {
+        if (c.type == Gate.Type.and || c.succs.length < 2)
+          continue;
+        // TODO there has to be a better way
+        bool removed;
+        do {
+          removed = false;
+          foreach (i, cp; c.probs) {
+            if (!c.succs.canFind(cp.eeID)) {
+              c.probs = c.probs.remove(i);
+              removed = true;
+              break;
+            }
+          }
+        }
+        while (removed);
 
-    // string dot = generateDot(this);
-    // write("/tmp/graph3.dot", dot);
+        foreach (cs; c.succs) {
+          if (!c.probs.canFind!(a => a.eeID == cs))
+            c.probs ~= tuple!("eeID", "prob")(cs, 1.0);
+          // TODO back propagation of probs 
+        }
+      }
+    }
 
+    void removeDuplicateAndGates() {
+      auto removeGateIDs = tuple!(long, long)(-1, -1);
+      do {
+        if (removeGateIDs[0] >= 0) {
+          foreach (removeGateID; [removeGateIDs[0], removeGateIDs[1]].sort!"a > b") {
+            auto id = gates[removeGateID].id;
+            gates = gates.remove!(SwapStrategy.unstable)(removeGateID);
+            writeln("Removing EPC_Element ", id, ", with deps=", epcElements[id].deps);
+            epcElements.remove(id);
+          }
+          removeGateIDs[0] = -1;
+          // return;
+        }
+        updateSuccs();
+
+        gateRemover: foreach (leftIDX, ref left; gates) {
+          if (left.type != Gate.Type.and || left.partner.isNull || left.succs.length <= 1)
+            continue;
+
+          foreach (rightID; left.succs) { // TODO also for deps
+            if (!epcElements[rightID].isGate)
+              continue;
+            auto right = epcElements[rightID].asGate;
+            if (right.type != Gate.Type.and || right.partner.isNull || right.succs.length <= 1)
+              continue;
+
+            auto outerPartner = epcElements[left.partner].asGate;
+            auto innerPartner = epcElements[right.partner].asGate;
+
+            assert(outerPartner.type == Gate.Type.and && innerPartner.type == Gate.Type.and);
+
+            assert(innerPartner.succs.length == 1, "innerPartner.succs=" ~ innerPartner.succs.text);
+            assert(outerPartner.succs.length == 1, "outerPartner.succs=" ~ outerPartner.succs.text);
+
+            // innerPartner.deps = outerPartner.deps.dup;
+
+            if (!outerPartner.deps.canFind(innerPartner.id))
+              continue;
+
+            writeln(left.id, ", left.deps=", left.deps, ", outer.deps=", outerPartner.deps);
+            writeln(outerPartner.id, ", left.succs=", left.succs, ", outer.succs=", outerPartner.succs);
+
+            right.deps = left.deps.dup; // OK
+            foreach (s; left.succs)
+              if (s != rightID)
+                epcElements[s].deps = epcElements[s].deps.remove!(a => epcElements[a].id == left.id) ~ [rightID].dup; // OK
+            removeGateIDs[0] = leftIDX;
+
+            if (!outerPartner.succs.empty) {
+              auto outerSucc = epcElements[outerPartner.succs[0]];
+              outerSucc.deps = outerSucc.deps.remove!(a => epcElements[a].id == outerPartner.id);
+              outerSucc.deps ~= innerPartner.id;
+            }
+            foreach (depID; outerPartner.deps)
+              if (depID != innerPartner.id)
+                innerPartner.deps ~= depID; // OK
+
+            foreach (outerIDX, ref gate; gates)
+              if (outerPartner.id == gate.id) {
+                removeGateIDs[1] = outerIDX;
+                break;
+              }
+            updateSuccs();
+            writeln(right.id, ", right.deps=", right.deps, ", inner.deps=", innerPartner.deps);
+            writeln(innerPartner.id, ", right.succs=", right.succs, ", inner.succs=", innerPartner.succs);
+
+            break gateRemover;
+          }
+        }
+      }
+      while (removeGateIDs[0] != -1);
+    }
+
+    void findGatePartners() {
+      import std.range : enumerate;
+      import std.algorithm : minElement, map;
+      import std.typecons : Tuple;
+
+      // find Gate partners
+      import util;
+
+      gates.each!(c => c.partner.nullify());
+      foreach (ref c; gates) {
+        immutable bool isSplit = c.succs.length > 1;
+        if (!isSplit || c.type == Gate.Type.xor)
+          continue;
+        Tuple!(size_t, "index", ulong, "value")[] checkArr;
+        auto allAfter = c.succs.map!(cs => listAllObjsAfter(epcElements[cs], typeid(Gate))).array;
+        writeln("allAfter for each succ of ", c.name, ": ", allAfter);
+        // ulong[][] cmbs;
+        // for (size_t i = c.succs.length; i >= 2; i--)
+        //   cmbs ~= comb(c.succs, i);
+        // writeln("cmbs: ", cmbs);
+        // foreach (i, cs; c.succs) {
+        //   foreach (j, afterObj; allAfter[i]) {
+        //   }
+        // }
+
+        //foreach (cmb; cmbs) {
+        typeof(checkArr)[] afterConnsPerBranch;
+        foreach (i, cs; c.succs) {
+          // if (c.loopsFor.canFind(cs))
+          //   continue;
+          // listAllObjs preserves the order of found objects but for setIntersection, we need to sort the input arrays
+          // to later restore the original found-order, we enumerate the results 
+          auto branchObjs = allAfter[i].remove!(a => a == c.id
+              || epcElements[a].asGate.type != c.type || !epcElements[a].asGate.partner.isNull); // listAllObjs(epcElements[cs], typeid(Gate), false);
+          // if (branchObjs.canFind(cs)) {
+          //   epcElements[cs].asGate.loopsFor ~= cs;
+          //   continue;
+          // }
+          afterConnsPerBranch ~= [branchObjs.enumerate.array.sort!"a.value < b.value".array];
+          if (i > 0)
+            checkArr = setIntersection!"a.value < b.value"(afterConnsPerBranch[i], checkArr).array;
+          else
+            checkArr = afterConnsPerBranch[0];
+        }
+        //   break;
+        // if (!checkArr.empty) {
+        //   checkArr = checkArr.sort!"a.index < b.index".array;
+        //   writeln("cmb worked: ", cmb, " with ", checkArr.map!"a.value");
+        //   break;
+        // }
+        //}
+        // writeln("For ", c.name, ": ", afterConnsPerBranch);
+        // XXX only with xor Gates you can build non-hierarchical layouts
+        if (checkArr.empty) {
+
+          import std.file;
+          import web.dotGenerator;
+
+          string doto = generateDot(this);
+          write("/tmp/graph.dot", doto);
+          throw new Exception("Can't find partner for " ~ c.name);
+        }
+        // assert(!checkArr.empty);
+        if (checkArr.empty) {
+          // writeln(c.name ~ " allAfter: ", allAfter);
+          continue;
+        }
+        // checkArr = checkArr.sort!"a.index < b.index".array;
+        // sizediff_t i = 0;
+        // c.partner = checkArrs[i].value;
+        // while (c.partner == c.id || !epcElements[c.partner].asGate.partner.isNull) {
+        //   if (i + 1 == checkArrs.length) {
+        //     writeln("checkArrs: ", checkArrs.map!(kv => kv.value));
+        //     throw new Exception("Could not find partner for " ~ c.name);
+        //   }
+        //   c.partner = checkArrs[++i].value; // 
+        // }
+        c.partner = checkArr.minElement!"a.index < b.index".value;
+        // writeln("PARTNER FOR " ~ c.name ~ " is G" ~ c.partner.text);
+        // if (c.id == c.partner)
+        //   throw new Exception(c.name ~ " can't have itself as partner.");
+        // if (!epcElements[c.partner].asGate.partner.isNull) {
+        //   throw new Exception("C" ~ text(c.partner) ~ " has already C" ~ text(
+        //       epcElements[c.partner].asGate.partner.get) ~ " -- couldn't find partner for " ~ c.name ~ ".");
+        // }
+        epcElements[c.partner].asGate.partner = c.id;
+
+        // writeln("c.succs=", c.succs, ", checkArr.deps=", epcElements[checkArr[0]].deps);
+        // XXX this happens when there is an additional edge to a join (e.g. part of a loop)
+        // assert(c.succs.length == epcElements[checkArr[0]].deps.length, "Didn't find the right partner Gate for " ~ c.name);
+      }
+    }
+
+    void setFunctionAgts() {
+      // set Function.agts 
+      foreach (f; funcs) {
+        ulong[] ps;
+        foreach (p; agts)
+          if (p.deps.canFind(f.id))
+            ps ~= p.id;
+        f.agts = ps;
+      }
+    }
+
+    void setAgentQuals() {
+      // set Agent.quals
+      foreach (ref p; agts) {
+        foreach (pd; p.deps) {
+          if (!p.quals.canFind(pd))
+            p.quals ~= pd;
+        }
+      }
+    }
+
+    void addEndEvent() {
+      auto last = epcElements[getEndId()];
+      if (!last.isEvent) {
+        auto evt = add([last.id], new Event);
+        last.succs = [evt.id];
+      }
+    }
+
+    updateSuccs();
+
+    addEndEvent();
+
+    setFunctionAgts();
+    setAgentQuals();
+
+    findGatePartners();
+    removeDuplicateAndGates();
+    identifyGateLoops();
+    setGateProbs();
   }
 
   ulong[] listAllFuncsBefore(const EE ee) const {
@@ -438,13 +470,13 @@ class BusinessProcess {
     postProcess();
   }
 
-  const(Event) getEventFromFunc(const Function f) const {
-    return epcElements[find!((id) => epcElements[id].isEvent)(f.deps)[0]].asEvent;
-  }
+  // const(Event) getEventFromFunc(const Function f) const {
+  //   return epcElements[find!((id) => epcElements[id].isEvent)(f.succs)[0]].asEvent;
+  // }
 
-  Event getEventFromFunc(const Function f) {
-    return epcElements[find!((id) => epcElements[id].isEvent)(f.deps)[0]].asEvent;
-  }
+  // Event getEventFromFunc(const Function f) {
+  //   return epcElements[find!((id) => epcElements[id].isEvent)(f.succs)[0]].asEvent;
+  // }
 
 private:
   ulong objCounter_ = 0;

@@ -50,7 +50,7 @@ class BusinessProcessModifier {
     // BusinessProcess np = proc_.clone();
     // mos ~= ModsOption(np, nt, [mods[0]]);
 
-    // if (!findOptimalModifications(mos, &AssignMod.create)) {
+    // if (!findOptimalModifications(mos, &ParallelizeMod.create)) {
     if (!findOptimalModifications(mos, &ParallelizeMod.create, &MoveMod.create, &AssignMod.create)) {
       result ~= "No optimizations found";
       return [];
@@ -110,7 +110,6 @@ private:
     //   return t;
     // }).takeExactly(250).mean;
     double origTime = MultiSimulator.allPathSimulate(sor, proc_, defSim, sims);
-    writeln("origTime: ", origTime);
 
     if (origProcTime_ < 0)
       origProcTime_ = origTime;
@@ -210,7 +209,8 @@ private:
     if (donePts.empty)
       return false;
 
-    writeln("Found ", donePts.length.text, " BPs, runtimes: ", donePts.map!(a => a.runtime));
+    writeln("BP origTime: ", origTime);
+    writeln("Found ", donePts.length.text, " new BPs, runtimes: ", donePts.map!(a => a.runtime));
     // mos = donePts.sort!("a.runtime < b.runtime").release;
     // mos = donePts.sort!("a.runtime < b.runtime").uniq!((a, b) => a.proc.hasSameStructure(b.proc)).array;
     // mos = donePts.sort!("a.runtime < b.runtime").array;

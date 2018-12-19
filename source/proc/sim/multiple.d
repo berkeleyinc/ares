@@ -36,6 +36,7 @@ class MultiSimulator {
   static double allPathSimulate(const BusinessProcess inp, out Simulation[] sims) {
     return allPathSimulate(new Simulator(inp), inp, sims);
   }
+
   static double allPathSimulate(Simulator sor, const BusinessProcess inp, out Simulation[] sims) {
     return allPathSimulate(sor, inp, Simulation.def, sims);
   }
@@ -50,18 +51,19 @@ class MultiSimulator {
   static double allPathSimulate(Simulator sor, const BusinessProcess inp, in Simulation defSim, out Simulation[] sims) {
     PathFinder pf = new PathFinder(inp);
 
-    ulong[][] paths = pf.findPaths();
+    Tuple!(ulong[], double)[] paths = pf.findPaths();
     if (paths.empty)
       throw new Exception("PathFinder couldn't find any paths");
 
-    foreach (ref p; paths) {
-      import util; 
+    foreach (p; paths) {
+      import util;
+
       Simulation sim = defSim.gdup;
       Simulation.SplitOption[] sos;
-      foreach (i, ee; p) {
+      foreach (i, ee; p[0]) {
         if (inp(ee).isGate && inp(ee).succs.length > 1 && inp(ee).asGate.type != Gate.Type.and) {
           foreach (ref rt; sim.startTimePerToken)
-            sos ~= Simulation.SplitOption(rt.tid, ee, [p[i + 1]]);
+            sos ~= Simulation.SplitOption(rt.tid, ee, [p[0][i + 1]]);
         }
       }
       sim.fos = sos;
@@ -71,11 +73,12 @@ class MultiSimulator {
       //     .asGate.type != Gate.Type.and));
     }
 
-    ulong[] times;
-    foreach (ref sim; sims) {
-      times ~= sor.simulate(sim);
+    double rt = 0;
+    foreach (idx, ref sim; sims) {
+      // writeln("sor.sim + paths[idx][1] -> ",(cast(double) sor.simulate(sim)), ":", paths[idx][1]);
+      rt += paths[idx][1] * cast(double) sor.simulate(sim);
     }
-    return times[].mean;
+    return rt;
   }
 
 }

@@ -171,7 +171,7 @@ class Token {
       ubyte[] data = process_.save();
       import std.file;
 
-      write("bp.error", data);
+      write("/tmp/bp.error", data);
       throw new Exception("currEE " ~ currEE.name ~ " succs.empty");
     }
 

@@ -99,7 +99,7 @@ private class MoveModFactory {
       if (lastID !in pathTimesPerFork[cID].startByLastID)
         foreach (possStartID; pathTimesPerFork[cID].startIDs) {
           // check if this startID is an element of the path from lastID back to the fork-gate
-          auto pathObjs = proc_.listAllObjsBefore(proc_(lastID), typeid(EE), proc_(cID).asGate.partner);
+          auto pathObjs = proc_.listAllObjsBefore(proc_(lastID), typeid(EE), proc_(cID).asGate.partner) ~ [lastID];
           if (pathObjs.canFind(possStartID)) {
             pathTimesPerFork[cID].startByLastID[lastID] = possStartID;
             break;
@@ -109,6 +109,7 @@ private class MoveModFactory {
     };
 
     Simulation[] sims;
+    proc_.saveToFile("graph2.bin");
     MultiSimulator.allPathSimulate(sor, proc_, sims);
     // writeln("sims: ", sims);
     // foreach (i; 0 .. 1000) {
@@ -301,9 +302,7 @@ private class MoveModFactory {
         return false;
       //}
 
-      import std.file;
-
-      write("test.bin", proc_.save());
+      proc_.saveToFile("test.bin");
       writeln("startSimulation from=", from.name, " to ", to.name);
       // Simulation.allPathSimulate(proc_);
       durOfMovable = MultiSimulator.multiSimulate(proc_, 10, (cast(ulong) from.id).nullable,

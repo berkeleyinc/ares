@@ -305,6 +305,7 @@ class WebService {
 
         while (true) {
           tmpProc = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+          tmpProc.saveToFile();
 
           string result;
           auto m = new BusinessProcessModifier(tmpProc, defSim);
@@ -332,12 +333,13 @@ class WebService {
     const size_t simCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_simsPerBP].as!size_t;
     const size_t tokenCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parTokensPerSim].as!size_t;
     const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenTokenStarts].as!ulong;
-    string msg = "Running " ~ simCount.text ~ " simulations per BP with " ~ tokenCount.text ~ " Tokens each ...\n";
+    string msg = "Running " ~ simCount.text ~ " simulations per BP with " ~ tokenCount.text ~ " tokens each ...\n";
 
     Simulation defSim = Simulation.construct(tokenCount, timeBetween);
 
-    ulong[] times;
+    double[] times;
     times.length = processCount;
+    times[] = 0.0;
 
     const(BusinessProcess)[] ps = Sessions.get(req.session.id).bps;
 
@@ -355,16 +357,19 @@ class WebService {
         // result ~= "BP " ~ text(bpID) ~ "\n";
         sor.process = bp;
         auto timeTaken = sor.simulate(sim);
+
         // import proc.sim.multiple;
-        // ulong timeTaken = cast(ulong) MultiSimulator.allPathSimulate(sor, bp, defSim);
+        // auto timeTaken = MultiSimulator.allPathSimulate(sor, bp, defSim);
         synchronized {
           times[bpID] += timeTaken;
         }
         // result ~= "\n";
       }
     }
+
     // msg ~= result ~"\n\n";
-    msg ~= "BP times: " ~ text(times.map!(a => cast(double) a / cast(double) simCount)) ~ "\n";
+    // msg ~= "BP times: " ~ text(times) ~ "\n";
+    msg ~= "BP times: " ~ text(times.map!(a => a / simCount)) ~ "\n";
     msg ~= "Runtime: " ~ text(sw.peek()) ~ "\n";
 
     res.writeBody(msg, "text/plain");

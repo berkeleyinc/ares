@@ -158,7 +158,7 @@ private:
   ptrdiff_t[] foundSOIdcs_;
 
   void print(string msg) {
-   writeln(msg);
+   // writeln(msg);
   }
 
   // string[size_t] tokenResults_;

@@ -51,10 +51,9 @@ class BusinessProcessGenerator {
 
     BusinessProcess bp = new BusinessProcess;
 
-    EE addEnd(EE from) {
-      auto evt = new Event;
-      // evt.label = "END";
-      return bp.add([from.id], evt);
+    void addEnd(EE from) {
+      if (!from.isEvent)
+        bp.add([from.id], new Event);
     }
 
     rndGen = Random(unpredictableSeed);
@@ -76,9 +75,9 @@ class BusinessProcessGenerator {
         //  return null;
         //}
         n = 3; // force seq
-      } else if (*pFuncs == 0) {
-        n = 3; // force seq
-        // TODO
+        // } else if (*pFuncs == 0) {
+        //   n = 3; // force seq
+        //   // TODO
       } else
         n = ps.map!(a => a.prob).dice;
       Paradigm* par = &ps[n];
@@ -86,8 +85,14 @@ class BusinessProcessGenerator {
       // writeln("Choosing " ~ text(par.type) ~ ", prob=", par.prob);
       if (par.type == Paradigm.Type.seq) {
         (*pFuncs)++;
-        Function f = bp.add([from.id], new Function());
+        Function f;
+        if (from.isFunc) {
+          Event e = bp.add([from.id], new Event);
+          f = bp.add([e.id], new Function());
+        } else
+          f = bp.add([from.id], new Function());
         f.dur = uniform!"[]"(functionDurationLimits[0], functionDurationLimits[1]);
+        // Event e = bp.add([f.id], new Event);
         Agent[] ps;
 
         enum AgentAssignStrategy : size_t {
@@ -121,12 +126,17 @@ class BusinessProcessGenerator {
       }
 
       if (par.type == Paradigm.Type.loop) {
-        if (typeid(from) == typeid(Gate) && from.asGate.type == Gate.Type.xor) {
+        if (from.isGate && from.asGate.type == Gate.Type.xor) {
           return generate(gc, from, pDepth, pFuncs, insideAnd);
         }
+        if (from.isFunc)
+          from = bp.add([from.id], new Event);
         EE startConn = bp.add([from.id], new Gate(Gate.Type.xor));
         EE nextConn = bp.add([startConn.id], new Gate(Gate.Type.xor));
         EE line = generate(gc, nextConn, pDepth, pFuncs, insideAnd);
+        if (line.isFunc) {
+          line = bp.add([line.id], new Event);
+        }
         startConn.deps ~= [line.id];
 
         // writeln("startConn.id=", startConn.id, ", nextConn.id=", nextConn.id, ", startConn.dep=", line.id);
@@ -151,6 +161,11 @@ class BusinessProcessGenerator {
       case Paradigm.Type.and:
         type = Gate.Type.and;
         endBranchCount = 0; // can't end branches in AND-blocks
+
+        if (from.isFunc) {
+          from = bp.add([from.id], new Event);
+          //f = bp.add([e.id], new Function());
+        }
         break;
       default:
         break;
@@ -181,8 +196,14 @@ class BusinessProcessGenerator {
           }
           addEnd(line);
         } else {
-          branches ~= generate(gc, startConn, pDepth, pFuncs, insideAnd);
-          branchIds ~= branches[$ - 1].id;
+          auto lastObj = generate(gc, startConn, pDepth, pFuncs, insideAnd);
+
+          if (lastObj.isFunc) {
+            lastObj = bp.add([lastObj.id], new Event);
+            //f = bp.add([e.id], new Function());
+          }
+          branches ~= lastObj;
+          branchIds ~= lastObj.id;
         }
       }
       EE endConn;

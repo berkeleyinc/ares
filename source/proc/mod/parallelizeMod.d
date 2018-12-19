@@ -27,22 +27,27 @@ class ParallelizeMod : Modification {
     Gate endConn = new Gate(Gate.Type.and);
 
     // we assume that the fids array is in order: a -> b -> c -> d
-    auto f0Event = proc.getEventFromFunc(start);
-    if (!f0Event.deps.empty) {
-      auto preObject = proc(f0Event.deps[0]); // can be Gate or Function
-      startConn.deps = [preObject.id];
-    }
-    proc.add(startConn.deps, startConn);
+    // auto f0Event = proc.getEventFromFunc(start);
+    // if (!f0Event.deps.empty) {
+    //   auto preObject = proc(f0Event.deps[0]); // can be Gate or Function
+    //   startConn.deps = [preObject.id];
+    // }
+    proc.add([start.deps[0]], startConn);
 
     foreach (fid; fids) {
-      auto fEvent = proc.getEventFromFunc(proc(fid).asFunc);
-      fEvent.deps = [startConn.id];
-      endConn.deps ~= fid;
+      auto fEvent = proc(proc(fid).succs[0]);
+      proc(fid).deps = [startConn.id];
+      endConn.deps ~= fEvent.id;
     }
     proc.add(endConn.deps, endConn);
 
-    foreach (s; end.succs) {
-      proc(s).deps = proc(s).deps.replace([end.id], [endConn.id]);
+    auto endEvent = proc(end.succs[0]);
+    if (!endEvent.isEvent) {
+      endConn.deps = endConn.deps.replace([endEvent.id], [end.id]);
+      endEvent = end;
+    }
+    foreach (s; endEvent.succs) {
+      proc(s).deps = proc(s).deps.replace([endEvent.id], [endConn.id]);
     }
     proc.postProcess();
   }
@@ -70,7 +75,7 @@ private class ParallelizeModFactory {
 
     ulong[][] possiblePar;
     foreach (i, epcFunc; proc_.funcs) {
-      auto preFuncIds = proc_.getEventFromFunc(epcFunc).deps.find!((id) => proc_(id).isFunc);
+      auto preFuncIds = proc_(epcFunc.deps[0]).deps.find!((id) => proc_(id).isFunc);
       if (preFuncIds.empty)
         continue;
       assert(preFuncIds.length == 1);
@@ -111,11 +116,11 @@ private class ParallelizeModFactory {
         possiblePar ~= [preFuncId, epcFunc.id];
     }
 
-    writeln(possiblePar);
-// TODO:
-//     possiblePar fine, but use [0] and [1] or [$-1] and [$-2] for ParaMods
-//     PathFinder, add arguments startID & endID
-/*
+    writeln("possiblePar: ", possiblePar);
+    // TODO:
+    //     possiblePar fine, but use [0] and [1] or [$-1] and [$-2] for ParaMods
+    //     PathFinder, add arguments startID & endID
+    /*
 
    [1,2,3], [4,5] ,[6,7,8,9]
 

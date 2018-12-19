@@ -9,34 +9,34 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +39 proc/mod/businessProcessModifier.d
-badd +123 proc/sim/simulator.d
-badd +79 proc/mod/assignMod.d
-badd +94 proc/mod/moveMod.d
-badd +169 proc/sim/pathFinder.d
-badd +1 proc/businessProcess.d
-badd +98 proc/businessProcessGenerator.d
-badd +317 web/service.d
+badd +213 proc/mod/businessProcessModifier.d
+badd +242 proc/sim/simulator.d
+badd +50 proc/mod/assignMod.d
+badd +91 proc/mod/moveMod.d
+badd +75 proc/sim/pathFinder.d
+badd +10 proc/businessProcess.d
+badd +359 web/service.d
 badd +213 ~/th/code/ares/public/js/site.js
 badd +1 proc/epcElement.d
 badd +52 graphviz/dotGenerator.d
 badd +1 proc/event.d
 badd +1 proc/func.d
-badd +41 proc/gate.d
-badd +55 proc/sim/multiple.d
+badd +44 proc/gate.d
+badd +52 proc/sim/multiple.d
 badd +12 proc/businessProcessExamples.d
 badd +32 config.d
-badd +87 proc/mod/parallelizeMod.d
-badd +50 proc/sim/token.d
+badd +47 proc/mod/parallelizeMod.d
+badd +141 proc/sim/token.d
 badd +1 proc/mod/modification.d
 badd +1 app.d
 badd +4 proc/agent.d
 badd +13 proc/sim/simulation.d
 badd +38 web/sessions.d
 badd +4 ~/th/code/ares/dub.json
+badd +184 test/businessProcessGenerator.d
 argglobal
 silent! argdel *
-edit web/service.d
+edit test/businessProcessGenerator.d
 set splitbelow splitright
 wincmd t
 set winminheight=0
@@ -53,12 +53,12 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 285 - ((20 * winheight(0) + 21) / 42)
+let s:l = 184 - ((21 * winheight(0) + 21) / 43)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-285
-normal! 05|
+184
+normal! 0
 lcd ~/th/code/ares/source
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0
