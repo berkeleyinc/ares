@@ -238,9 +238,9 @@ private:
         bool connProbsSet = r.currEE.asGate.probs.any!(p => p.prob > 0);
         for (size_t i = 0; i < perms.length; i++) {
           auto perm = perms[i];
-          double total = cast(double) perm.fold!(delegate(t, eeID) {
-            if (r.currEE.asGate.probs.canFind!(prob => prob.eeID == eeID))
-              return t + r.currEE.asGate.probs.find!(prob => prob.eeID == eeID)[0].prob;
+          double total = cast(double) perm.fold!(delegate(t, nodeId) {
+            if (r.currEE.asGate.probs.canFind!(prob => prob.nodeId == nodeId))
+              return t + r.currEE.asGate.probs.find!(prob => prob.nodeId == nodeId)[0].prob;
             else {
             // TODO this shouldnt happen, postProcess has to fix probs after restructuring
               return t + 1.0; //(connProbsSet ? 0.0 : 1.0); 
@@ -250,7 +250,7 @@ private:
           // writeln("perm=", perm, ", total=", total);
         }
 
-        // TODO probs of eeID arent passed when restructuring
+        // TODO probs of nodeId arent passed when restructuring
 
         // writeln("succs: ", r.currEE.succs);
         // writeln("perms: ", perms);

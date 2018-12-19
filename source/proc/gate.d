@@ -41,7 +41,7 @@ class Gate : EE {
   }
 
   // probability that a certain branch will be chosen by the simulator
-  Tuple!(ulong, "eeID", double, "prob")[] probs;
+  Tuple!(ulong, "nodeId", double, "prob")[] probs;
 
   @nonPacked Nullable!ulong partner;
   @nonPacked ulong[] loopsFor = [];

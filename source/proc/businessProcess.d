@@ -58,16 +58,16 @@ class BusinessProcess {
     return endIds;
   }
 
-  const(EE) opCall(ulong eeID) const {
-    if (eeID !in epcElements)
-      throw new Exception("eeID " ~ text(eeID) ~ " not an element of this process");
-    return epcElements[eeID];
+  const(EE) opCall(ulong nodeId) const {
+    if (nodeId !in epcElements)
+      throw new Exception("nodeId " ~ text(nodeId) ~ " not an element of this process");
+    return epcElements[nodeId];
   }
 
-  EE opCall(ulong eeID) {
-    if (eeID !in epcElements)
-      throw new Exception("eeID " ~ text(eeID) ~ " not an element of this process");
-    return epcElements[eeID];
+  EE opCall(ulong nodeId) {
+    if (nodeId !in epcElements)
+      throw new Exception("nodeId " ~ text(nodeId) ~ " not an element of this process");
+    return epcElements[nodeId];
   }
 
   T add(T)(ulong[] deps, T obj) {
@@ -214,7 +214,7 @@ class BusinessProcess {
         do {
           removed = false;
           foreach (i, cp; c.probs) {
-            if (!c.succs.canFind(cp.eeID)) {
+            if (!c.succs.canFind(cp.nodeId)) {
               c.probs = c.probs.remove(i);
               removed = true;
               break;
@@ -224,8 +224,8 @@ class BusinessProcess {
         while (removed);
 
         foreach (cs; c.succs) {
-          if (!c.probs.canFind!(a => a.eeID == cs))
-            c.probs ~= tuple!("eeID", "prob")(cs, 1.0);
+          if (!c.probs.canFind!(a => a.nodeId == cs))
+            c.probs ~= tuple!("nodeId", "prob")(cs, 1.0);
           // TODO back propagation of probs 
         }
       }

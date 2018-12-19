@@ -143,7 +143,7 @@ class WebService {
     } else if (el.isGate) {
       writeln("Changing branch probs of Gate ", id, ", oid=", oid, ", newProb=", p);
       foreach (ref pe; el.asGate.probs)
-        if (pe.eeID == oid)
+        if (pe.nodeId == oid)
           pe.prob = p;
     }
     res.writeBody("OK", "text/plain");
@@ -181,9 +181,9 @@ class WebService {
       json["beforeFuncs"] = fs;
     } else if (el.isAgent) {
       ulong[] fs;
-      foreach (eeID; process.epcElements.byKey())
-        if (process.epcElements[eeID].isFunc)
-          fs ~= eeID;
+      foreach (nodeId; process.epcElements.byKey())
+        if (process.epcElements[nodeId].isFunc)
+          fs ~= nodeId;
       json["allFuncs"] = fs;
     }
 

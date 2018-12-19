@@ -18,7 +18,7 @@ class PathFinder {
     // ulong time = 0;
     ulong[] visitedIds;
     ulong[] loopedFor;
-    double prob = 1;
+    double runtimeMod = 1;
 
     // Path opAddAssign(const ref Path path) {
     //   time += path.time;
@@ -39,34 +39,35 @@ class PathFinder {
       //   pstr ~= "\t" ~ text(p) ~ "\n";
       // writeln("EE_PATHS (" ~ text(paths_.length) ~ "):\n" ~ pstr);
     }
-    return paths_.map!(p => tuple(p.visitedIds, p.prob)).array;
+    return paths_.map!(p => tuple(p.visitedIds, p.runtimeMod)).array;
   }
 
 private:
   const BusinessProcess process_;
   Path[] paths_;
 
-  void findPaths(ulong eeID, ref Path path) {
-    const EE ee = process_.epcElements[eeID];
-    assert(!ee.isAgent);
-    bool canFindPaths(ulong eeID, ulong prevID) {
-      if (process_(eeID).isGate && process_(eeID).asGate.loopsFor.canFind(prevID)) {
-        if (path.loopedFor.filter!(a => a == prevID).array.length > 1) {
-          // writeln("reached loopedFor: ", path.loopedFor);
-          return false;
-        } else {
-          path.loopedFor ~= prevID;
-          // writeln("loopedFor: ", path.loopedFor);
-        }
+  bool canHandleLoop(ref Path path, ulong nodeId, ulong prevID) {
+    if (process_(nodeId).isGate && process_(nodeId).asGate.loopsFor.canFind(prevID)) {
+      if (path.loopedFor.filter!(a => a == prevID).array.length > 1) {
+        // writeln("reached loopedFor: ", path.loopedFor);
+        return false;
+      } else {
+        path.loopedFor ~= prevID;
+        // writeln("loopedFor: ", path.loopedFor);
       }
-      return true;
     }
+    return true;
+  }
+
+  void findPaths(ulong nodeId, ref Path path) {
+    const EE ee = process_.epcElements[nodeId];
+    assert(!ee.isAgent);
 
     if (ee.isFunc) {
       // writeln(bo.name ~ ", waiting for " ~ text((cast(Function) bo).dur));
       path.visitedIds ~= ee.id;
       // path.time += (cast(Function) ee).dur;
-      if (!ee.succs.empty && canFindPaths(ee.succs[0], ee.id)) {
+      if (!ee.succs.empty && canHandleLoop(path, ee.succs[0], ee.id)) {
         findPaths(ee.succs[0], path);
       }
     } else if (ee.isEvent) {
@@ -74,7 +75,7 @@ private:
       if (ee.succs.empty) {
         // reached END event
         paths_ ~= path;
-      } else if (canFindPaths(ee.succs[0], ee.id)) {
+      } else if (canHandleLoop(path, ee.succs[0], ee.id)) {
         findPaths(ee.succs[0], path);
       }
     } else if (ee.isGate) {
@@ -87,10 +88,10 @@ private:
 
       if (isSplit) {
         Path[] branchPaths;
-        foreach (o; gate.succs) {
+        foreach (firstElemIdOfBranch; gate.succs) {
           //if (process_(o).isGate && process_(o).asGate.loopsFor.canFind(ee.id)) {
           //if (process_(o).succs.any!(sg => process_(sg).isGate && process_(sg).asGate.loopsFor.canFind(o))) {
-          if (!canFindPaths(o, gate.id)) {
+          if (!canHandleLoop(path, firstElemIdOfBranch, gate.id)) {
             writeln("SKIPPING LOOP");
             //paths_ ~= path;
             continue;
@@ -99,25 +100,24 @@ private:
 
           import util;
 
+          // create a copy of path
           Path newPath = path.gdup;
           if (!isAnd) {
             double sum = reduce!"a + b"(0.0, gate.probs.map!"a.prob");
-            auto ms = gate.probs.filter!(a => a.eeID == o).array;
-            assert(ms.length == 1);
-            //writeln("warning: ms vs. probs for eeID=", o, " is ms=" ~ text(ms) ~ " -- probs=" ~ text(gate.probs));
-            newPath.prob *= ms[0].prob / sum;
+            auto branchProb = gate.probs.filter!(a => a.nodeId == firstElemIdOfBranch).front.prob;
+            newPath.runtimeMod *= branchProb / sum;
           } else {
-            newPath.prob *= 1.0 / (cast(double) gate.succs.length);
+            newPath.runtimeMod *= 1.0 / (cast(double) gate.succs.length);
           }
 
           // writeln("starting simulation of new path, start=" ~ process_.epcElements[o].name);
-          findPaths(o, newPath);
+          findPaths(firstElemIdOfBranch, newPath);
           branchPaths ~= newPath;
           // writeln("simulated path: " ~ text(newPath));
         }
 
       } else { // JOIN / MERGE
-        if (!ee.succs.empty && canFindPaths(ee.succs[0], ee.id)) {
+        if (!ee.succs.empty && canHandleLoop(path, ee.succs[0], ee.id)) {
           findPaths(ee.succs[0], path);
         }
       }

@@ -12,10 +12,10 @@ set shortmess=aoO
 badd +213 proc/mod/businessProcessModifier.d
 badd +242 proc/sim/simulator.d
 badd +50 proc/mod/assignMod.d
-badd +91 proc/mod/moveMod.d
-badd +75 proc/sim/pathFinder.d
+badd +39 proc/mod/moveMod.d
+badd +81 proc/sim/pathFinder.d
 badd +10 proc/businessProcess.d
-badd +359 web/service.d
+badd +344 web/service.d
 badd +213 ~/th/code/ares/public/js/site.js
 badd +1 proc/epcElement.d
 badd +52 graphviz/dotGenerator.d
@@ -36,7 +36,7 @@ badd +4 ~/th/code/ares/dub.json
 badd +184 test/businessProcessGenerator.d
 argglobal
 silent! argdel *
-edit test/businessProcessGenerator.d
+edit proc/sim/pathFinder.d
 set splitbelow splitright
 wincmd t
 set winminheight=0
@@ -53,12 +53,12 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 184 - ((21 * winheight(0) + 21) / 43)
+let s:l = 39 - ((38 * winheight(0) + 21) / 42)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-184
-normal! 0
+39
+normal! 09|
 lcd ~/th/code/ares/source
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0

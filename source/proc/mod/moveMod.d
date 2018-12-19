@@ -109,7 +109,7 @@ private class MoveModFactory {
     };
 
     Simulation[] sims;
-    proc_.saveToFile("graph2.bin");
+    // proc_.saveToFile("graph2.bin");
     MultiSimulator.allPathSimulate(sor, proc_, sims);
     // writeln("sims: ", sims);
     // foreach (i; 0 .. 1000) {
@@ -173,7 +173,7 @@ private class MoveModFactory {
       // bool poss2 = poss && avTimePerBranch[idxMax].time >= durOfMovable;
       // poss = getMovable(true, cID, neighborIDs, memberIDs, durOfMovable) && avTimePerBranch[idxMax].time >= durOfMovable;
       if (poss && avTimePerBranch[idxMax].time >= durOfMovable) {
-        writeln("YES! can move ", memberIDs.front, " -> ", memberIDs.back);
+        // writeln("YES! can move ", memberIDs.front, " -> ", memberIDs.back);
         pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), last, connClose);
         // pathTimesPerFork[cID].times[memberIDs.back] = pathTimesPerFork[cID].times[last.id].map!(t => t + durOfMovable).array;
         // pathTimesPerFork[cID].times.remove(last.id);
@@ -181,41 +181,41 @@ private class MoveModFactory {
 
         // proc_.movePart(proc_(memberIDs.front), proc_(memberIDs.back), last, conn);
       } else if (poss && durOfMovable <= maxTime) {
-        writeln("ALTERNATIVE! can move ", memberIDs.front, " -> ", memberIDs.back);
+        // writeln("ALTERNATIVE! can move ", memberIDs.front, " -> ", memberIDs.back);
         pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
       }
 
-      foreach (i, eeID; connClose.succs) {
+      foreach (i, nodeId; connClose.succs) {
         // TODO als seperator Path bei avTime <= maxTime
         poss = getMovable(true, connClose.id, neighborIDs, memberIDs, durOfMovable, i)
           && avTimePerBranch[idxMax].time >= durOfMovable;
         if (poss) {
-          writeln("YES!!! WANT move ", memberIDs.front, " to ", memberIDs.back, " between ",
-              connOpen.name, " and ", connClose.name);
+          // writeln("YES!!! WANT move ", memberIDs.front, " to ", memberIDs.back, " between ",
+          //     connOpen.name, " and ", connClose.name);
           pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
         }
       }
 
-      foreach (i, eeID; connOpen.deps) {
+      foreach (i, nodeId; connOpen.deps) {
         poss = getMovable(false, connOpen.id, neighborIDs, memberIDs, durOfMovable, i)
           && avTimePerBranch[idxMax].time >= durOfMovable;
         if (poss) {
-          writeln("YES!!! WANT(2) move ", memberIDs.front, " to ", memberIDs.back, " between ",
-              connOpen.name, " and ", connClose.name);
+          // writeln("YES!!! WANT(2) move ", memberIDs.front, " to ", memberIDs.back, " between ",
+          //     connOpen.name, " and ", connClose.name);
           pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
         }
       }
 
       poss = getMovable(false, connOpen.id, neighborIDs, memberIDs, durOfMovable);
       if (poss && avTimePerBranch[idxMax].time >= durOfMovable) {
-        writeln("YES! can ALSO move ", memberIDs.front, " -> ", memberIDs.back);
+        // writeln("YES! can ALSO move ", memberIDs.front, " -> ", memberIDs.back);
         pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen,
             proc_(pathTimesPerFork[cID].startByLastID[last.id]));
         // pathTimesPerFork[cID].times[memberIDs.back] = pathTimesPerFork[cID].times[last.id].map!(t => t + durOfMovable).array;
         // pathTimesPerFork[cID].times.remove(last.id);
         // pm_[$-1].apply(proc_);
       } else if (poss && durOfMovable <= maxTime) {
-        writeln("ALTERNATIVE! can ALSO move ", memberIDs.front, " -> ", memberIDs.back);
+        // writeln("ALTERNATIVE! can ALSO move ", memberIDs.front, " -> ", memberIDs.back);
         pms ~= new MoveMod(proc_(memberIDs.front), proc_(memberIDs.back), connOpen, connClose);
       }
       // static int ii = 0;
@@ -283,7 +283,7 @@ private class MoveModFactory {
 
       // if (next.isGate && next.asGate.type == Gate.Type.xor)
       //   return false;
-      writeln("THIS CONN is FINE: ", from.name, " (to ", to.name, ")");
+      // writeln("THIS CONN is FINE: ", from.name, " (to ", to.name, ")");
       ulong[] neighborIDs = proc_.listAllObjsAfter(from, typeid(Function), (cast(ulong) to.id).nullable);
 
       // if (fromID == 11 && from.id == 29) {
@@ -293,7 +293,7 @@ private class MoveModFactory {
       //  assert(0, "NO!");
       //}
 
-      writeln("neighborIDs: ", neighborIDs);
+      // writeln("neighborIDs: ", neighborIDs);
       // if (right) {
       if (neighborIDs.any!(f => proc_(f).asFunc.dependsOn.any!(dep => newNeighborIDs.canFind(dep))))
         return false;
@@ -302,7 +302,7 @@ private class MoveModFactory {
         return false;
       //}
 
-      proc_.saveToFile("test.bin");
+      // proc_.saveToFile("test.bin");
       writeln("startSimulation from=", from.name, " to ", to.name);
       // Simulation.allPathSimulate(proc_);
       durOfMovable = MultiSimulator.multiSimulate(proc_, 10, (cast(ulong) from.id).nullable,
