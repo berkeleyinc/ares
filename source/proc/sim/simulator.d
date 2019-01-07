@@ -17,6 +17,8 @@ import config;
 import util;
 
 class Simulator {
+  const bool SIMULATOR_LOG = false;
+
   this(const BusinessProcess proc) {
     this.proc_ = proc;
     rndGen = Random(unpredictableSeed);
@@ -77,7 +79,8 @@ class Simulator {
 
             foreach (r; tokens_) {
               r.incTime(incStep);
-              print(" " ~ r.str);
+              if (SIMULATOR_LOG)
+                print(" " ~ r.str);
             }
             if (tokens_.length == 1) {
               print(text(queue_));
@@ -123,6 +126,7 @@ class Simulator {
       if (++maxTime > 10000) { //  return currentTime_;
         import std.file;
         import web.dotGenerator;
+
         string dot = generateDot(proc_);
         write("/tmp/graph_break.dot", dot);
         write("/tmp/graph_break.bin", proc_.save());
@@ -158,7 +162,8 @@ private:
   ptrdiff_t[] foundSOIdcs_;
 
   void print(string msg) {
-   // writeln(msg);
+    if (SIMULATOR_LOG)
+      writeln(msg);
   }
 
   // string[size_t] tokenResults_;
@@ -242,9 +247,9 @@ private:
             if (r.currEE.asGate.probs.canFind!(prob => prob.nodeId == nodeId))
               return t + r.currEE.asGate.probs.find!(prob => prob.nodeId == nodeId)[0].prob;
             else {
-            // TODO this shouldnt happen, postProcess has to fix probs after restructuring
+              // TODO this shouldnt happen, postProcess has to fix probs after restructuring
               return t + 1.0; //(connProbsSet ? 0.0 : 1.0); 
-              }
+            }
           })(0.0);
           probs ~= [total / cast(double) perm.length];
           // writeln("perm=", perm, ", total=", total);
@@ -260,7 +265,9 @@ private:
         splits = perms[dice(probs)].array.dup;
 
         // splits = array(randomSample(r.currEE.succs, isXor ? 1 : uniform!"[]"(1, r.currEE.succs.length)));
-        print(r.str ~ ", Chosen splits: " ~ text(splits) ~ ", succs=" ~ text(r.currEE.succs) ~ ", probs=" ~ text(probs));
+        if (SIMULATOR_LOG)
+          print(r.str ~ ", Chosen splits: " ~ text(splits) ~ ", succs=" ~ text(r.currEE.succs) ~ ", probs=" ~ text(
+              probs));
 
         // import std.file;
         // write("/tmp/graph_break2.bin", proc_.save());
@@ -329,7 +336,7 @@ private:
           continue;
         if (ri.currEE.id == r.currEE.id) {
           if (fnOnTokenJoin) {
-            writeln("currEE: ", r.currEE.name, ", r.lastEE: ", r.lastEEID, ", ri.lastEE: ", ri.lastEEID);
+            // writeln("currEE: ", r.currEE.name, ", r.lastEE: ", r.lastEEID, ", ri.lastEE: ", ri.lastEEID);
             fnOnTokenJoin(ri.time.func + ri.time.queue, r.currEE.id, ri.lastEEID);
           }
           if (ri.time.func >= mtime) {
@@ -369,7 +376,8 @@ private:
 
   void onTokenEnd(ref int tokenElemId) {
     // writeln("RUNNER END !!! TIME=", tokens_[tokenElemId].time, "\n\n");
-    print(tokens_[tokenElemId].str ~ " finished.");
+    if (SIMULATOR_LOG)
+      print(tokens_[tokenElemId].str ~ " finished.");
     // tokenResults_[tokens_[tokenElemId].id] = tokens_[tokenElemId].str;
     tokens_ = tokens_.remove(tokenElemId--);
   }

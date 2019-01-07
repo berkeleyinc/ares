@@ -175,10 +175,11 @@ class BusinessProcess {
 
     void updateSuccs() {
       // fill EE.succs
-      foreach (ref eePair; epcElements.byKeyValue()) {
+      auto eekv = epcElements.byKeyValue();
+      foreach (ref eePair; eekv) {
         eePair.value.succs = [];
-        foreach (ref obj; epcElements.byKeyValue()) {
-          if (canFind(obj.value.deps, eePair.key) && !obj.value.isAgent) {
+        foreach (ref obj; eekv) {
+          if (!obj.value.isAgent && canFind(obj.value.deps, eePair.key)) {
             eePair.value.succs ~= obj.key;
           }
         }
@@ -319,7 +320,7 @@ class BusinessProcess {
           continue;
         Tuple!(size_t, "index", ulong, "value")[] checkArr;
         auto allAfter = c.succs.map!(cs => listAllObjsAfter(epcElements[cs], typeid(Gate))).array;
-        writeln("allAfter for each succ of ", c.name, ": ", allAfter);
+        // writeln("allAfter for each succ of ", c.name, ": ", allAfter);
         // ulong[][] cmbs;
         // for (size_t i = c.succs.length; i >= 2; i--)
         //   cmbs ~= comb(c.succs, i);
@@ -453,21 +454,6 @@ class BusinessProcess {
 
   ulong[] listAllObjsBefore(TI)(const EE ee, TI type, Nullable!ulong tillID = Nullable!ulong()) const {
     return listAllObjs(ee, type, true, tillID);
-  }
-
-  void movePart(EE start, EE end, EE bwStart, EE bwEnd) {
-    import std.algorithm.setops;
-
-    auto endAdapter = epcElements[end.succs[0]];
-    endAdapter.deps = setDifference(endAdapter.deps.sort, [end.id]).array;
-    endAdapter.deps ~= start.deps.dup; //[bwStart.id];
-
-    bwEnd.deps = setDifference(bwEnd.deps.sort, [bwStart.id]).array;
-    bwEnd.deps ~= end.id;
-
-    start.deps = [bwStart.id].dup;
-
-    postProcess();
   }
 
   // const(Event) getEventFromFunc(const Function f) const {

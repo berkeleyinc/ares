@@ -53,7 +53,7 @@ class ParallelizeMod : Modification {
   }
 
   static Modification[] create(const BusinessProcess p, in Simulation defSim) {
-    return (new ParallelizeModFactory(p)).create();
+    return (new ParallelizeModFactory(p)).findParallelizations();
   }
 
 private:
@@ -67,7 +67,7 @@ private class ParallelizeModFactory {
     proc_ = p;
   }
 
-  Modification[] create() {
+  Modification[] findParallelizations() {
     import std.random;
 
     Modification[] pms;

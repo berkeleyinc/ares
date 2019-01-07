@@ -30,11 +30,28 @@ class MoveMod : Modification {
     if (bwStart.deps.canFind(bwEnd.id))
       swap(bwStart, bwEnd);
 
-    p.movePart(from, to, bwStart, bwEnd);
+    void movePart(EE start, EE end, EE bwStart, EE bwEnd) {
+      import std.algorithm.setops;
+
+      with (p) {
+        auto endAdapter = epcElements[end.succs[0]];
+        endAdapter.deps = setDifference(endAdapter.deps.sort, [end.id]).array;
+        endAdapter.deps ~= start.deps.dup; //[bwStart.id];
+
+        bwEnd.deps = setDifference(bwEnd.deps.sort, [bwStart.id]).array;
+        bwEnd.deps ~= end.id;
+
+        start.deps = [bwStart.id].dup;
+
+        postProcess();
+      }
+    }
+
+    movePart(from, to, bwStart, bwEnd);
   }
 
   static Modification[] create(const BusinessProcess p, in Simulation defSim) {
-    return (new MoveModFactory(p)).create();
+    return (new MoveModFactory(p)).findMovements();
   }
 
 private:
@@ -61,7 +78,7 @@ private class MoveModFactory {
 
   alias MembersFrontBack = Tuple!(ulong, "front", ulong, "back");
 
-  Modification[] create() {
+  Modification[] findMovements() {
     Modification[] pms;
     struct PathTime {
       double[][ulong] times; // time taken per path (identified by lastID)
@@ -76,12 +93,12 @@ private class MoveModFactory {
       auto conn = proc_(cID).asGate;
       if (conn.type != Gate.Type.and || conn.partner.isNull)
         return;
-      writeln("on token split cID=", cID, ", firstID=", firstID, ", has partner=", !conn.partner.isNull);
+      // writeln("on token split cID=", cID, ", firstID=", firstID, ", has partner=", !conn.partner.isNull);
 
       if (conn.partner !in pathTimesPerFork) {
         pathTimesPerFork[conn.partner] = PathTime.init;
         pathTimesPerFork[conn.partner].startTime = currTime;
-        writeln("cID=", cID, ", conn.partner=", conn.partner);
+        // writeln("cID=", cID, ", conn.partner=", conn.partner);
       }
       // if (currTime != pathTimesPerFork[conn.partner].startTime) {
       //   throw new Exception("currTime=" ~ currTime.text ~ ", pathTimesPerFork[conn.partner].startTime="
@@ -92,7 +109,7 @@ private class MoveModFactory {
     sor.fnOnTokenJoin = delegate(ulong currTime, ulong cID, ulong lastID) {
       if (proc_(cID).asGate.type != Gate.Type.and || cID !in pathTimesPerFork)
         return;
-      writeln("on token join cID=", cID, ", lastID=", lastID, ", currTime=", currTime);
+      // writeln("on token join cID=", cID, ", lastID=", lastID, ", currTime=", currTime);
 
       pathTimesPerFork[cID].times[lastID] ~= [cast(double)(currTime - pathTimesPerFork[cID].startTime)];
       // XXX that's how we can find the right startID for the lastID

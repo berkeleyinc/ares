@@ -17,6 +17,7 @@ import std.range : iota;
 import web.sessions;
 import web.dotGenerator;
 
+import test.tester;
 import test.businessProcessExamples;
 import gen = test.businessProcessGenerator;
 
@@ -64,14 +65,14 @@ class WebService {
       logInfo("creating new Session " ~ sessionID_);
       Sessions.create(sessionID_);
       // Sessions.get(sessionID_).bps = [];
-      // process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+      process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
       // process = gen.BusinessProcessGenerator.generate();
 
-      auto p = assignAgentExample(false);
+      //auto p = assignAgentExample(false);
 
       // auto p = dilemmaExample();
 
-      process = p;
+      //process = p;
 
       dot_ = generateDot(process, dotGenOpts_);
     }
@@ -264,7 +265,7 @@ class WebService {
     string result;
 
     string[] dots;
-    auto newProcs = m.modify(result);
+    auto newProcs = m.modify(Sessions.get(sessionID_).cfg, result);
     foreach (i, p; newProcs) {
       dots ~= generateDot(p, dotGenOpts_);
       Sessions.get(sessionID_).bps ~= p;
@@ -277,7 +278,7 @@ class WebService {
   }
 
   @method(HTTPMethod.GET)
-  @path("/gen") void generateBusinessProcess(HTTPServerRequest req, HTTPServerResponse res, Nullable!bool multi) {
+  @path("/gen") void generateBusinessProcess(HTTPServerRequest req, HTTPServerResponse res) {
     logInfo(__FUNCTION__);
     bpID_ = 0;
     sessionID_ = req.session.id;
@@ -296,35 +297,29 @@ class WebService {
     scope (exit)
       fn_exitScope();
 
-    if (!multi.isNull() && multi) {
-      BusinessProcess tmpProc;
-      try {
-        const size_t tokenCount = Sessions.get(sessionID_).cfg[Cfg.R.SIM_parTokensPerSim].as!size_t;
-        const auto timeBetween = Sessions.get(sessionID_).cfg[Cfg.R.SIM_timeBetweenTokenStarts].as!ulong;
-        Simulation defSim = Simulation.construct(tokenCount, timeBetween);
-
-        while (true) {
-          tmpProc = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
-          tmpProc.saveToFile();
-
-          string result;
-          auto m = new BusinessProcessModifier(tmpProc, defSim);
-          auto newProcs = m.modify(result);
-        }
-      } catch (Throwable t) {
-        process = tmpProc;
-        fn_exitScope();
-        throw t;
-      }
-    } else
-      process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+    process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
   }
 
-  @method(HTTPMethod.GET) @path("/test") void testRestructure(HTTPServerRequest req, HTTPServerResponse res) {
-    bpID_ = 0;
+  @method(HTTPMethod.GET) @path("/testStop") void testRestructureStop(HTTPServerRequest req, HTTPServerResponse res) {
+    Tester.stopTester();
+    res.writeBody("0", "text/plain");
+  }
+
+  @method(HTTPMethod.GET) @path("/test") void testRestructureStart(HTTPServerRequest req,
+      HTTPServerResponse res, Nullable!bool log) {
+    // bpID_ = 0;
     sessionID_ = req.session.id;
-    Sessions.get(req.session.id).bps = [];
-    process = gen.BusinessProcessGenerator.generate(Sessions.get(sessionID_).cfg);
+    // Sessions.get(req.session.id).bps = [];
+
+    if (!log.isNull() && log) {
+      auto msg = Tester.popLogMessage();
+      if (msg.empty && Tester.stopped)
+        msg = "EOF";
+      res.writeBody(msg, "text/plain");
+    } else {
+      Tester.runTester(Sessions.get(sessionID_).cfg);
+      res.writeBody("Starting tester...", "text/plain");
+    }
   }
 
   @method(HTTPMethod.GET) @path("/sim/start") void startSimulation(HTTPServerRequest req, HTTPServerResponse res) {

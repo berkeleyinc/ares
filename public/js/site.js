@@ -27,7 +27,7 @@ function draw(data) {
   });
   $('.node-popover').popover();
   svg_div.html(svg).show(); //.fadeIn();
-  $(window).scrollTop($('#vizTabsNav').position().top);
+  // $(window).scrollTop($('#vizTabsNav').position().top);
   // console.log("svg drawn");
 }
 
@@ -166,7 +166,7 @@ function nodePopover(node, name) {
 }
 
 function setLog(data) {
-  var log = $('#log') 
+  var log = $('.log') 
   log.text(data);
   log[0].scrollTop = log[0].scrollHeight;
   log.css("opacity", "1.0");
@@ -221,7 +221,7 @@ function requestGeneration() {
 
 function requestRestructuring() {
   setLog("Processing ...");
-  $('#log').css("opacity", "0.3");
+  $('.log').css("opacity", "0.3");
   $.get('/res', null, function (data) {
     setLog(data.log);
     for (var i = 0; i < data.dots_len; i++) {
@@ -233,8 +233,33 @@ function requestRestructuring() {
 
 function requestSimulation() {
   setLog("Simulations in progress ...");
-  $('#log').css("opacity", "0.3");
+  $('.log').css("opacity", "0.3");
   $.get('/sim/start', null, function (data) {
+    setLog(data);
+  });
+}
+
+var testTimer;
+function requestTestStop() {
+  $.get('/testStop', null, null);
+}
+
+function requestTest() {
+  $.get('/test', null, function (data) {
+
+    testTimer = setInterval(
+     function() {   
+      $.get('/test?log=1', null, function (data) {
+        if (data == 'EOF')
+          clearInterval(testTimer);
+        else if (data.length > 0) {
+          setLog(data);
+        }
+      });
+     },
+     10
+    );
+
     setLog(data);
   });
 }
@@ -274,11 +299,13 @@ function onSiteReady() {
   });
 
   // --- main tab ---
-  $("#btnGen").click(function () { requestGeneration(); });
-  $("#btnSim").click(function () { requestSimulation(); });
-  $("#btnRes").click(function () { requestRestructuring(); });
-  $("#btnClone").click(function () { requestClone(); });
-  $("#btnClearLog").click(function () { setLog(''); });
+  $(".btnTest").click(function () { requestTest(); });
+  $(".btnTestStop").click(function () { requestTestStop(); });
+  $(".btnGen").click(function () { requestGeneration(); });
+  $(".btnSim").click(function () { requestSimulation(); });
+  $(".btnRes").click(function () { requestRestructuring(); });
+  $(".btnClone").click(function () { requestClone(); });
+  $(".btnClearLog").click(function () { setLog(''); });
 
   // --- options tab ---
   $("#btnShowAgents").click(function () { requestSetOption('dot', 'opts_showAgents=true'); });
@@ -310,9 +337,9 @@ function onSiteReady() {
   // });
   $.get('/config', null, function (data) {
     var cfg = JSON.parse(data);
-    var cfgProps = Array.from({length: 5}, i => 'value').concat(['checked']);
-    var cfgInpIDs = ['BD', 'FC', 'SPP', 'RPS', 'TBR', 'RCP'];
-    var cfgEntries = ['GEN_maxDepth', 'GEN_maxFuncs', 'SIM_simsPerBP', 'SIM_parTokensPerSim', 'SIM_timeBetweenTokenStarts', 'SIM_reuseChosenPaths'];
+    var cfgProps = Array.from({length: 5}, i => 'value'); // .concat(['checked']);
+    var cfgInpIDs = ['BD', 'FC', 'SPP', 'RPS', 'TBR'];
+    var cfgEntries = ['GEN_maxDepth', 'GEN_maxFuncs', 'SIM_simsPerBP', 'SIM_parTokensPerSim', 'SIM_timeBetweenTokenStarts'];
     var setConfig = function(key, val) {
       console.log("set_config, key="+key+", val="+val);
       $.get('/set_config?key=' + key + "&val=" + val);
@@ -320,6 +347,12 @@ function onSiteReady() {
     for (var i = 0; i < cfgInpIDs.length; i++) {
       $('#inp' + cfgInpIDs[i]).prop(cfgProps[i], cfg[cfgEntries[i]]);
       $('#inp' + cfgInpIDs[i]).change(function (i){return function() { setConfig(cfgEntries[i], this[cfgProps[i]]); }}(i));
+    }
+    var cfgCheckIDs = ['RCP', 'UMM', 'UPM', 'UAM'];
+    var cfgCheckEntries = ['SIM_reuseChosenPaths', 'MOD_useMoveMod', 'MOD_useParallelizeMod', 'MOD_useAssignMod'];
+    for (var i = 0; i < cfgCheckIDs.length; i++) {
+      $('#chk' + cfgCheckIDs[i]).prop('checked', cfg[cfgCheckEntries[i]]);
+      $('#chk' + cfgCheckIDs[i]).change(function (i){return function() { setConfig(cfgCheckEntries[i], this['checked']); }}(i));
     }
     for (var i = 0; i < cfg.GEN_branchTypeProbs.length; i++) {
       $('#inpP' + i).val(cfg.GEN_branchTypeProbs[i]);
@@ -333,7 +366,7 @@ function onSiteReady() {
       $('#inpFD' + i).val(cfg.GEN_avgFuncDurs[i]);
       $('#inpFD' + i).change(function (i){return function() { setConfig("GEN_avgFuncDurs/" + i, $(this).val()); }}(i));
     }
-    // console.log(cfg);
+    console.log(cfg);
   });
 
 

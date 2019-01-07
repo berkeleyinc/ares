@@ -2,7 +2,7 @@ module proc.sim.pathFinder;
 
 import proc.businessProcess;
 
-import std.algorithm : sort, map, canFind, any, filter;
+import std.algorithm : sort, map, canFind, any, filter, reduce;
 import std.array : join, array;
 import std.conv : text;
 import std.stdio : writeln;
@@ -48,7 +48,7 @@ private:
 
   bool canHandleLoop(ref Path path, ulong nodeId, ulong prevID) {
     if (process_(nodeId).isGate && process_(nodeId).asGate.loopsFor.canFind(prevID)) {
-      if (path.loopedFor.filter!(a => a == prevID).array.length > 1) {
+      if (reduce!((a, b) => a + (b == prevID ? 1 : 0))(0, path.loopedFor) > 1) { //.filter!(a => a == prevID).array.length > 1) {
         // writeln("reached loopedFor: ", path.loopedFor);
         return false;
       } else {
@@ -92,7 +92,7 @@ private:
           //if (process_(o).isGate && process_(o).asGate.loopsFor.canFind(ee.id)) {
           //if (process_(o).succs.any!(sg => process_(sg).isGate && process_(sg).asGate.loopsFor.canFind(o))) {
           if (!canHandleLoop(path, firstElemIdOfBranch, gate.id)) {
-            writeln("SKIPPING LOOP");
+            // writeln("SKIPPING LOOP");
             //paths_ ~= path;
             continue;
           }
@@ -106,6 +106,8 @@ private:
             double sum = reduce!"a + b"(0.0, gate.probs.map!"a.prob");
             auto branchProb = gate.probs.filter!(a => a.nodeId == firstElemIdOfBranch).front.prob;
             newPath.runtimeMod *= branchProb / sum;
+            if (newPath.runtimeMod < 0.05) // stop condition
+              continue;
           } else {
             newPath.runtimeMod *= 1.0 / (cast(double) gate.succs.length);
           }

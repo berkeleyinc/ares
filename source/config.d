@@ -67,7 +67,11 @@ class Cfg {
     SIM_simsPerBP, // run simulations per BP
     SIM_parTokensPerSim, // how many tokens to start per simulation
     SIM_timeBetweenTokenStarts, // time between start of runners 
-    SIM_reuseChosenPaths // Simulator will choose same paths from first BP (BP 1)
+    SIM_reuseChosenPaths, // Simulator will choose same paths from first BP (BP 1)
+
+    MOD_useMoveMod,
+    MOD_useParallelizeMod,
+    MOD_useAssignMod
   }
 
   immutable static string configFileName = "config.js";
@@ -146,6 +150,12 @@ private:
   };
   static JSONValue def(R ce) {
     final switch (ce) {
+    case R.MOD_useMoveMod:
+      return JSONValue(true);
+    case R.MOD_useParallelizeMod:
+      return JSONValue(true);
+    case R.MOD_useAssignMod:
+      return JSONValue(true);
     case R.GEN_branchTypeProbs:
       return JSONValue([20.0, 8.0, 8.0, 60.0, 15.0]);
     case R.GEN_branchCountProbs:

@@ -127,16 +127,21 @@ class BusinessProcessGenerator {
 
       if (par.type == Paradigm.Type.loop) {
         if (from.isGate && from.asGate.type == Gate.Type.xor) {
-          return generate(gc, from, pDepth, pFuncs, insideAnd);
+
+          int canSpend = 0;
+          immutable int rest = gc.maxFuncs - *pFuncs;
+          if (rest > 1)
+            canSpend = uniform(0, cast(int) (rest / 1.5));
+          return generate(Limits(gc.maxDepth, *pFuncs + canSpend), from, pDepth, pFuncs, insideAnd);
         }
-        if (from.isFunc)
-          from = bp.add([from.id], new Event);
+        // if (from.isFunc)
+        //   from = bp.add([from.id], new Event);
         EE startConn = bp.add([from.id], new Gate(Gate.Type.xor));
         EE nextConn = bp.add([startConn.id], new Gate(Gate.Type.xor));
         EE line = generate(gc, nextConn, pDepth, pFuncs, insideAnd);
-        if (line.isFunc) {
-          line = bp.add([line.id], new Event);
-        }
+        // if (line.isFunc) {
+        //   line = bp.add([line.id], new Event);
+        // }
         startConn.deps ~= [line.id];
 
         // writeln("startConn.id=", startConn.id, ", nextConn.id=", nextConn.id, ", startConn.dep=", line.id);
@@ -162,7 +167,7 @@ class BusinessProcessGenerator {
         type = Gate.Type.and;
         endBranchCount = 0; // can't end branches in AND-blocks
 
-        if (from.isFunc) {
+        if (from.isFunc || (from.isGate && from.asGate.type != Gate.Type.and && from.deps.length == 1)) {
           from = bp.add([from.id], new Event);
           //f = bp.add([e.id], new Function());
         }

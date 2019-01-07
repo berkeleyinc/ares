@@ -21,6 +21,7 @@ import proc.mod.moveMod;
 import proc.mod.parallelizeMod;
 import proc.mod.assignMod;
 
+import config;
 import util;
 
 class BusinessProcessModifier {
@@ -29,7 +30,7 @@ class BusinessProcessModifier {
     defSim_ = defSim;
   }
 
-  BusinessProcess[] modify(out string resultStr) {
+  BusinessProcess[] modify(Cfg.PerUser cfg, out string resultStr) {
 
     string[] result;
     auto sw = StopWatch(AutoStart.yes);
@@ -51,7 +52,15 @@ class BusinessProcessModifier {
     // mos ~= ModsOption(np, nt, [mods[0]]);
 
     // if (!findOptimalModifications(mos, &ParallelizeMod.create)) {
-    if (!findOptimalModifications(mos, &ParallelizeMod.create, &MoveMod.create, &AssignMod.create)) {
+    Modification[]function(const BusinessProcess, in Simulation)[] ffuncs;
+    if (cfg[Cfg.R.MOD_useMoveMod].as!bool)
+      ffuncs ~= &MoveMod.create;
+    if (cfg[Cfg.R.MOD_useAssignMod].as!bool)
+      ffuncs ~= &AssignMod.create;
+    if (cfg[Cfg.R.MOD_useParallelizeMod].as!bool)
+      ffuncs ~= &ParallelizeMod.create;
+
+    if (!findOptimalModifications(mos, ffuncs)) {
       result ~= "No optimizations found";
       return [];
     }
@@ -94,7 +103,8 @@ private:
   }
 
   // returns saved time units
-  bool findOptimalModifications(FactoryFuncs...)(out ModsOption[] mos, auto ref FactoryFuncs ffuncs) {
+  bool findOptimalModifications(out ModsOption[] mos, Modification[]function(const BusinessProcess,
+      in Simulation)[] ffuncs) {
     writeln(__FUNCTION__);
     Simulation[] sims;
     Simulator sor = new Simulator(null);
@@ -125,7 +135,7 @@ private:
       PTM[] ptms;
       Modification[] pms;
 
-      foreach (createFunc; ffuncs)
+      foreach (ref createFunc; ffuncs)
         pms ~= createFunc(sourceBPMod.proc, defSim);
       // bool allAssigns = true;
       // foreach (ref pm; pms)
@@ -149,7 +159,6 @@ private:
         continue;
       }
 
-
       checkNewModsLoop: foreach (m; pms) {
         foreach (mod; sourceBPMod.mods)
           if (m.toHash == mod.toHash)
@@ -167,12 +176,10 @@ private:
         //   times ~= sor.simulate(sim);
         // double time = times[].mean;
         // writeln("DONE, ", time);
-        //if (sourceBPMod.runtime == 0 || time <= sourceBPMod.runtime)
-        {
+        if (sourceBPMod.runtime == 0 || time <= sourceBPMod.runtime) {
 
-          // if (time == sourceBPMod.runtime && sourceBPMod.sameTimeCount >= 5) {
-          // } else
-          {
+          if (time == sourceBPMod.runtime && sourceBPMod.sameTimeCount >= 5) {
+          } else {
             // Simulation[] newSims;
             // MultiSimulator.allPathSimulate(sor, p, defSim, newSims);
             if (time == sourceBPMod.runtime)
@@ -204,6 +211,8 @@ private:
       sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".take(now > msecs(2500)
           ? (now > seconds(5) ? (now > seconds(10) ? 1 : 2) : 5) : 100).array;
       // sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".take(5).array;
+      if (!donePts.empty && now > seconds(20)) // TODO add to Cfg.PerUser
+        break;
     }
 
     if (donePts.empty)

@@ -23,6 +23,11 @@ class MultiSimulator {
     return generate!(() => sor.simulate(startID, endID)).takeExactly(count).mean;
   }
 
+  static double multiSimulate(ref Simulation sim, Simulator sor, const BusinessProcess p, ulong count = 500,
+      Nullable!ulong startID = Nullable!ulong.init, Nullable!ulong endID = Nullable!ulong.init) {
+    return generate!(() => sor.simulate(sim, startID, endID)).takeExactly(count).mean;
+  }
+
   static double allPathSimulate(const BusinessProcess inp) {
     Simulation[] sims;
     return allPathSimulate(inp, sims);

@@ -7,7 +7,7 @@
     "Runtime": {
         "GEN_avgFuncDurs": [
             1,
-            1
+            4
         ],
         "GEN_branchCountProbs": [
             64,
@@ -22,13 +22,14 @@
             60,
             15
         ],
-        "GEN_maxDepth": 17,
-        "GEN_maxFuncs": 6,
-        "SIM_parRunnersPerSim": 5,
+        "GEN_maxDepth": 7,
+        "GEN_maxFuncs": 13,
+        "MOD_useAssignMod": true,
+        "MOD_useMoveMod": true,
+        "MOD_useParallelizeMod": true,
         "SIM_parTokensPerSim": 1,
         "SIM_reuseChosenPaths": true,
-        "SIM_simsPerBP": 100,
-        "SIM_timeBetweenRunnerStarts": 0,
+        "SIM_simsPerBP": 2500,
         "SIM_timeBetweenTokenStarts": 0
     }
 }

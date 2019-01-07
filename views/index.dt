@@ -9,22 +9,24 @@ html
   body
     ul.nav.nav-tabs(role="tablist")
       li.nav-item
-        a.nav-link.active(href="#mainTab", data-toggle="tab", role="tab") Ares
+        a.nav-link(href="#mainTab", data-toggle="tab", role="tab") Ares
+      li.nav-item
+        a.nav-link.active(href="#testTab", data-toggle="tab", role="tab") Test
       li.nav-item
         a.nav-link(href="#optionsTab", data-toggle="tab", role="tab") Options
       li.nav-item
         a.nav-link(href="#aboutTab", data-toggle="tab", role="tab") About
         
     div.tab-content
-      div.tab-pane.m-3.active(id="mainTab", role="tabpanel")
+      div.tab-pane.m-3(id="mainTab", role="tabpanel")
         div.btn-group(role="group")
-          button#btnGen.btn.btn-primary.btn-sm Generate
-          button#btnRes.btn.btn-primary.btn-sm Restructure
-          button#btnSim.btn.btn-primary.btn-sm Simulate
-        button#btnClone.btn.btn-outline-primary.btn-sm.ml-3 Clone
-        button#btnClearLog.btn.btn-outline-secondary.btn-sm.ml-3 Clear Log
+          button.btnGen.btn.btn-primary.btn-sm Generate
+          button.btnSim.btn.btn-primary.btn-sm Simulate
+          button.btnRes.btn.btn-primary.btn-sm Restructure
+        button.btnClone.btn.btn-outline-primary.btn-sm.ml-3 Clone
+        button.btnClearLog.btn.btn-outline-secondary.btn-sm.ml-3 Clear Log
         p
-        span#log(style="white-space: pre-wrap")
+        span.log(style="white-space: pre-wrap")
         p
         ul#vizTabsNav.nav.mt-1.nav-pills(role="tablist")
           - foreach (i; 0 .. bpCount)
@@ -36,6 +38,11 @@ html
           - foreach (i; 0 .. bpCount)
             div.tab-pane(id="vizTab-#{i}", role="tabpanel", class='#{i == 0 ? "active" : ""}')
         #graph
+      div.tab-pane.m-3.active(id="testTab", role="tabpanel")
+        div.btn-group(role="group")
+          button.btnTest.btn.btn-primary.btn-sm Start Tester
+          button.btnTestStop.btn.btn-primary.btn-sm Stop Tester
+          button.btnClearLog.btn.btn-outline-secondary.btn-sm.ml-3 Clear Log
       div.tab-pane.m-3(id="optionsTab", role="tabpanel")
         p
         button#btnShowAgents.btn.btn-outline-secondary.btn-sm(type="button", data-toggle="button", autocomplete="off") Toggle Agents
@@ -47,6 +54,31 @@ html
         button.btn.btn-outline-primary.float-right(type="button", data-toggle="button", onclick="location.href = '/new_session';") Reset session
         p
         div#cfgDiv
+          h3 Restructurer settings
+          div.ml-2
+            div.form-row
+              label.col use MoveMod
+              input#chkUMM.col-1.form-check(type="checkbox", value="")
+            div.form-row
+              label.col use ParallelizeMod
+              input#chkUPM.col-1.form-check(type="checkbox", value="")
+            div.form-row
+              label.col use AssignMod
+              input#chkUAM.col-1.form-check(type="checkbox", value="")
+          h3 Simulator settings
+          div.ml-2
+            div.form-row
+              label.col simulations per BP
+              input#inpSPP.col-1.form-control.form-control-sm(type="number", value="")
+            div.form-row
+              label.col amount of tokens per simulation
+              input#inpRPS.col-1.form-control.form-control-sm(type="number", value="")
+            div.form-row
+              label.col time between token starts
+              input#inpTBR.col-1.form-control.form-control-sm(type="number", value="")
+            div.form-row
+              label.col take same paths from BP 1 for BPs 2..$
+              input#chkRCP.col-1.form-check(type="checkbox", value="")
           h3 Generator settings
           div.ml-2
             div.form-row
@@ -72,24 +104,13 @@ html
               input#inpBC1.col-1.form-control.form-control-sm(type="number", value="", placeholder="3 b")
               input#inpBC2.col-1.form-control.form-control-sm(type="number", value="", placeholder="4 b")
               input#inpBC3.col-1.form-control.form-control-sm(type="number", value="", placeholder="5 b")
-          h3 Simulator settings
-          div.ml-2
-            div.form-row
-              label.col simulations per BP
-              input#inpSPP.col-1.form-control.form-control-sm(type="number", value="")
-            div.form-row
-              label.col amount of tokens per simulation
-              input#inpRPS.col-1.form-control.form-control-sm(type="number", value="")
-            div.form-row
-              label.col time between token starts
-              input#inpTBR.col-1.form-control.form-control-sm(type="number", value="")
-            div.form-row
-              label.col take same paths from BP 1 for BPs 2..$
-              input#inpRCP.col-1.form-check(type="checkbox")
       div.tab-pane.m-3(id="aboutTab", role="tabpanel")
         p Session count: #{sessionCount}
         p Contact information: 
           a(href="javascript:linkto_deobfuscate('nbjmup;c/fslfmfzjodAhnbjm/dpn');") b.erkeleyinc [at] gmail
+    p
+    span.log(style="white-space: pre-wrap")
+
 
     div#nodeDiv.input-group.input-group-sm(style="display: none;")
       table.table-sm

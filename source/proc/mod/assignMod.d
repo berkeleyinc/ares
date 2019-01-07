@@ -23,7 +23,7 @@ class AssignMod : Modification {
   }
 
   static Modification[] create(const BusinessProcess p, in Simulation defSim) {
-    return (new AssignModFactory(p)).create(defSim);
+    return (new AssignModFactory(p)).findAssignments(defSim);
   }
 
   private:
@@ -47,7 +47,7 @@ private class AssignModFactory {
     proc_ = p;
   }
 
-  Modification[] create(in Simulation defSim) {
+  Modification[] findAssignments(in Simulation defSim) {
     writeln(__FUNCTION__, " (assignMod)");
     Modification[] pms;
 
