@@ -1,0 +1,19 @@
+#!/usr/bin/gnuplot -p
+
+set title "Memory usage"
+set xlabel "Time (in sec)"
+#set yrange [ 1 : 100 ]
+#set xdata time
+set ylabel "Memory (in MB)"
+#set format x "%d.%m."
+set grid
+set key below
+
+#set term x11 1
+set term wxt
+#set term pngcairo
+#set output "mprof.png"
+
+datafile = 'mprof.dat'
+set key autotitle columnheader
+plot for [IDX=1:5] datafile index (IDX-1) u 4:3 w lines lw 3

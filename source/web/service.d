@@ -17,7 +17,7 @@ import std.range : iota;
 import web.sessions;
 import web.dotGenerator;
 
-import test.tester;
+import test.threadedTester;
 import test.businessProcessExamples;
 import gen = test.businessProcessGenerator;
 
@@ -301,7 +301,7 @@ class WebService {
   }
 
   @method(HTTPMethod.GET) @path("/testStop") void testRestructureStop(HTTPServerRequest req, HTTPServerResponse res) {
-    Tester.stopTester();
+    ThreadedTester.stopTester();
     res.writeBody("0", "text/plain");
   }
 
@@ -312,12 +312,12 @@ class WebService {
     // Sessions.get(req.session.id).bps = [];
 
     if (!log.isNull() && log) {
-      auto msg = Tester.popLogMessage();
-      if (msg.empty && Tester.stopped)
+      auto msg = ThreadedTester.popLogMessage();
+      if (msg.empty && ThreadedTester.stopped)
         msg = "EOF";
       res.writeBody(msg, "text/plain");
     } else {
-      Tester.runTester(Sessions.get(sessionID_).cfg);
+      ThreadedTester.runTester(Sessions.get(sessionID_).cfg, 8);
       res.writeBody("Starting tester...", "text/plain");
     }
   }

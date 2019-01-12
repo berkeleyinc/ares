@@ -122,7 +122,9 @@ private class MoveModFactory {
             break;
           }
         }
-      assert(lastID in pathTimesPerFork[cID].startByLastID);
+      if (lastID !in pathTimesPerFork[cID].startByLastID) {
+          throw new Exception("lastID !in pathTimesPerFork[cID].startByLastID");
+      }
     };
 
     Simulation[] sims;
@@ -320,11 +322,11 @@ private class MoveModFactory {
       //}
 
       // proc_.saveToFile("test.bin");
-      writeln("startSimulation from=", from.name, " to ", to.name);
+      // writeln("startSimulation from=", from.name, " to ", to.name);
       // Simulation.allPathSimulate(proc_);
       durOfMovable = MultiSimulator.multiSimulate(proc_, 10, (cast(ulong) from.id).nullable,
           (cast(ulong) to.id).nullable);
-      writeln("simulation time=", durOfMovable);
+      // writeln("simulation time=", durOfMovable);
 
       memberIDs.front = from.id;
       memberIDs.back = to.id;

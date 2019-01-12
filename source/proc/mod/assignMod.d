@@ -48,7 +48,7 @@ private class AssignModFactory {
   }
 
   Modification[] findAssignments(in Simulation defSim) {
-    writeln(__FUNCTION__, " (assignMod)");
+    // writeln(__FUNCTION__, " (assignMod)");
     Modification[] pms;
 
     Simulation[] sims;
@@ -68,7 +68,7 @@ private class AssignModFactory {
     timeTaken = MultiSimulator.allPathSimulate(sor, proc_, defSim, sims);
     // timeTaken = generate!(() { auto sim = defSim.gdup; auto t = sor.simulate(sim); sims ~= sim; return t;  })
     //   .takeExactly(700).mean;
-    writeln("time: ", timeTaken, " -- durByAID: ", durByAID, ", ", proc_.agts.length, " agts");
+    // writeln("time: ", timeTaken, " -- durByAID: ", durByAID, ", ", proc_.agts.length, " agts");
 
     auto occs = durByAID.byKeyValue().array.sort!"a.value < b.value";
     //auto mn = occs[0]; //durByAID.byKeyValue().minElement!"a.value";
@@ -85,7 +85,7 @@ private class AssignModFactory {
       }
       if (depsCan != proc_(mn.key).deps) {
         pms ~= new AssignMod(mn.key, depsCan);
-        writeln("maybe ", pms[$ - 1].toString());
+        // writeln("maybe ", pms[$ - 1].toString());
 
       }
     }

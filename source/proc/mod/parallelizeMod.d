@@ -116,7 +116,7 @@ private class ParallelizeModFactory {
         possiblePar ~= [preFuncId, epcFunc.id];
     }
 
-    writeln("possiblePar: ", possiblePar);
+    // writeln("possiblePar: ", possiblePar);
     // TODO:
     //     possiblePar fine, but use [0] and [1] or [$-1] and [$-2] for ParaMods
     //     PathFinder, add arguments startID & endID
@@ -149,7 +149,7 @@ private class ParallelizeModFactory {
         foreach (i, id; pp2) {
           if (pp.canFind(id)) {
             // TODO find out which pp should keep it
-            writeln("FOUND DUPLICATE ", id);
+            // writeln("FOUND DUPLICATE ", id);
             pp2 = pp2.remove(i);
             break;
           }

@@ -230,7 +230,7 @@ class BusinessProcessGenerator {
 
     int maxDepth = cfg[Cfg.R.GEN_maxDepth].as!int;
     int maxFuncs = cfg[Cfg.R.GEN_maxFuncs].as!int;
-    auto ee = generate(Limits(uniform(2, maxDepth), uniform(min(5, maxFuncs - 1), maxFuncs)), null, null, null);
+    auto ee = generate(Limits(maxDepth <= 2 ? 2 : uniform(2, maxDepth), uniform(min(5, maxFuncs - 1), maxFuncs)), null, null, null);
     addEnd(ee);
 
     bp.postProcess();

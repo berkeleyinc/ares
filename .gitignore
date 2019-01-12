@@ -15,3 +15,6 @@ ares-test-*
 *.lst
 *.s
 lib/
+*.log
+*.png
+*.dat

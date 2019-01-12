@@ -168,6 +168,7 @@ class Token {
 
     // writeln("For ", c.name, ": ", afterConnsPerBranch);
     if (currEE.succs.empty) {
+
       ubyte[] data = process_.save();
       import std.file;
 

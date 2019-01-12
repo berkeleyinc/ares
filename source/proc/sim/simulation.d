@@ -16,6 +16,7 @@ struct Simulation {
   @property static Simulation def() {
     Simulation sim;
     sim.startTimePerToken ~= TokenTime(0UL, 0UL);
+    // sim.startTimePerToken ~= TokenTime(0UL, 0UL);
     // sim.startTimePerToken ~= TokenTime(1UL, 0UL);
     return sim;
   }

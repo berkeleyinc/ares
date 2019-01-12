@@ -112,18 +112,20 @@ class Cfg {
 
 private:
   this() {
+    bool save = false;
     try {
       root_ = parseJSON(cast(string) read(configFileName));
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       writeln("Creating new " ~ configFileName ~ ".");
       root_ = JSONValue((int[string]).init);
       root_["General"] = (int[string]).init;
       root_["Runtime"] = (int[string]).init;
+      save = true;
     }
     [EnumMembers!G].each!(e => opIndex(e, Cfg.def(e)));
     [EnumMembers!R].each!(e => opIndex(e, Cfg.def(e)));
-    write(configFileName, root_.toPrettyString);
+    if (save)
+      write(configFileName, root_.toPrettyString);
   }
 
   ref JSONValue opIndex(T)(T key, JSONValue val) {

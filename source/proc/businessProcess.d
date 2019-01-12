@@ -239,7 +239,7 @@ class BusinessProcess {
           foreach (removeGateID; [removeGateIDs[0], removeGateIDs[1]].sort!"a > b") {
             auto id = gates[removeGateID].id;
             gates = gates.remove!(SwapStrategy.unstable)(removeGateID);
-            writeln("Removing EPC_Element ", id, ", with deps=", epcElements[id].deps);
+            // writeln("Removing EPC_Element ", id, ", with deps=", epcElements[id].deps);
             epcElements.remove(id);
           }
           removeGateIDs[0] = -1;
@@ -271,8 +271,8 @@ class BusinessProcess {
             if (!outerPartner.deps.canFind(innerPartner.id))
               continue;
 
-            writeln(left.id, ", left.deps=", left.deps, ", outer.deps=", outerPartner.deps);
-            writeln(outerPartner.id, ", left.succs=", left.succs, ", outer.succs=", outerPartner.succs);
+            // writeln(left.id, ", left.deps=", left.deps, ", outer.deps=", outerPartner.deps);
+            // writeln(outerPartner.id, ", left.succs=", left.succs, ", outer.succs=", outerPartner.succs);
 
             right.deps = left.deps.dup; // OK
             foreach (s; left.succs)
@@ -295,8 +295,8 @@ class BusinessProcess {
                 break;
               }
             updateSuccs();
-            writeln(right.id, ", right.deps=", right.deps, ", inner.deps=", innerPartner.deps);
-            writeln(innerPartner.id, ", right.succs=", right.succs, ", inner.succs=", innerPartner.succs);
+            // writeln(right.id, ", right.deps=", right.deps, ", inner.deps=", innerPartner.deps);
+            // writeln(innerPartner.id, ", right.succs=", right.succs, ", inner.succs=", innerPartner.succs);
 
             break gateRemover;
           }

@@ -25,12 +25,14 @@ import config;
 import util;
 
 class BusinessProcessModifier {
+  bool function() shouldStopFunc = { return false; };
+
   this(const BusinessProcess p, const Simulation defSim) {
     proc_ = p;
     defSim_ = defSim;
   }
 
-  BusinessProcess[] modify(Cfg.PerUser cfg, out string resultStr) {
+  BusinessProcess[] modify(const Cfg.PerUser cfg, out string resultStr) {
 
     string[] result;
     auto sw = StopWatch(AutoStart.yes);
@@ -105,7 +107,7 @@ private:
   // returns saved time units
   bool findOptimalModifications(out ModsOption[] mos, Modification[]function(const BusinessProcess,
       in Simulation)[] ffuncs) {
-    writeln(__FUNCTION__);
+    // writeln(__FUNCTION__);
     Simulation[] sims;
     Simulator sor = new Simulator(null);
     // double origTime = MultiSimulator.allPathSimulate(proc_, sims);
@@ -211,21 +213,22 @@ private:
       sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".take(now > msecs(2500)
           ? (now > seconds(5) ? (now > seconds(10) ? 1 : 2) : 5) : 100).array;
       // sourceBPMods = sourceBPMods.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".take(5).array;
-      if (!donePts.empty && now > seconds(20)) // TODO add to Cfg.PerUser
+      if (!donePts.empty && now > seconds(10) || shouldStopFunc()) // TODO add to Cfg.PerUser
         break;
     }
 
-    if (donePts.empty)
+    if (donePts.empty || shouldStopFunc()) {
       return false;
+    }
 
-    writeln("BP origTime: ", origTime);
-    writeln("Found ", donePts.length.text, " new BPs, runtimes: ", donePts.map!(a => a.runtime));
+    // writeln("BP origTime: ", origTime);
     // mos = donePts.sort!("a.runtime < b.runtime").release;
     // mos = donePts.sort!("a.runtime < b.runtime").uniq!((a, b) => a.proc.hasSameStructure(b.proc)).array;
     // mos = donePts.sort!("a.runtime < b.runtime").array;
     mos = donePts.sort!("a.runtime < b.runtime")
       .uniq!"a.runtime == b.runtime"
       .array;
+    // writeln("Found ", mos.length.text, " new BPs, runtimes: ", mos.map!(a => a.runtime), " (from ", origTime, ")");
     //mos = donePts.sort!("a.runtime < b.runtime").uniq!"a.runtime == b.runtime".array;
     return true;
     // donePts = donePts.sort!"a.runtime < b.runtime".uniq!"a.runtime == b.runtime".array;

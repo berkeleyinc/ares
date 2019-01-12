@@ -54,12 +54,12 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 124 - ((12 * winheight(0) + 22) / 44)
+let s:l = 226 - ((40 * winheight(0) + 22) / 44)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-124
-normal! 05|
+226
+normal! 09|
 lcd ~/th/code/ares/source
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0

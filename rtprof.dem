@@ -1,0 +1,21 @@
+#!/usr/bin/gnuplot -p
+
+set title "Verbesserung der Durchlaufzeit"
+#set xlabel "Time (in sec)"
+set auto x
+#set yrange [ 1 : 100 ]
+#set xdata time
+set ylabel "Differenz der DLZen"
+set xlabel "Restrukturierungsdurchlauf"
+#set format x "%d.%m."
+set grid
+set key below
+
+#set term x11 1
+#set term wxt
+set term pngcairo size 900, 650
+set output "rtprof.png"
+
+datafile = 'rtprof.dat'
+set key autotitle columnheader
+plot for [IDX=1:5] datafile index (IDX-1) u 3 w lines lw 1
