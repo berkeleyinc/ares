@@ -59,6 +59,7 @@ class BusinessProcessGenerator {
     rndGen = Random(unpredictableSeed);
     EE generate(Limits gc, EE from, uint* pDepth, uint* pFuncs, bool insideAnd = false) {
 
+      size_t n;
       uint depth = 0, funcs = 0;
       if (pDepth == null || pFuncs == null || from is null) {
         pDepth = &depth;
@@ -66,20 +67,20 @@ class BusinessProcessGenerator {
         Event startEvt = bp.add([], new Event());
         // startEvt.label = "START";
         from = startEvt;
+        n = [0, 1, 0, 1, 0].dice;
+      } else {
+        if (*pFuncs + 1 >= gc.maxFuncs || *pDepth >= gc.maxDepth) {
+          // if (typeid(from) == typeid(Function)) { // && typeid(from.deps[0]) != typeid(Gate)) {
+          //  writeln("null, pFuncs=", *pFuncs);
+          //  return null;
+          //}
+          n = 3; // force seq
+          // } else if (*pFuncs == 0) {
+          //   n = 3; // force seq
+          //   // TODO
+        } else
+          n = ps.map!(a => a.prob).dice;
       }
-
-      size_t n;
-      if (*pFuncs + 1 >= gc.maxFuncs || *pDepth >= gc.maxDepth) {
-        // if (typeid(from) == typeid(Function)) { // && typeid(from.deps[0]) != typeid(Gate)) {
-        //  writeln("null, pFuncs=", *pFuncs);
-        //  return null;
-        //}
-        n = 3; // force seq
-        // } else if (*pFuncs == 0) {
-        //   n = 3; // force seq
-        //   // TODO
-      } else
-        n = ps.map!(a => a.prob).dice;
       Paradigm* par = &ps[n];
 
       // writeln("Choosing " ~ text(par.type) ~ ", prob=", par.prob);
@@ -131,7 +132,7 @@ class BusinessProcessGenerator {
           int canSpend = 0;
           immutable int rest = gc.maxFuncs - *pFuncs;
           if (rest > 1)
-            canSpend = uniform(0, cast(int) (rest / 1.5));
+            canSpend = uniform(0, cast(int)(rest / 1.5));
           return generate(Limits(gc.maxDepth, *pFuncs + canSpend), from, pDepth, pFuncs, insideAnd);
         }
         // if (from.isFunc)
@@ -230,7 +231,8 @@ class BusinessProcessGenerator {
 
     int maxDepth = cfg[Cfg.R.GEN_maxDepth].as!int;
     int maxFuncs = cfg[Cfg.R.GEN_maxFuncs].as!int;
-    auto ee = generate(Limits(maxDepth <= 2 ? 2 : uniform(2, maxDepth), uniform(min(5, maxFuncs - 1), maxFuncs)), null, null, null);
+    auto ee = generate(Limits(maxDepth <= 2 ? 2 : uniform(2, maxDepth), uniform(min(5, maxFuncs - 1), maxFuncs)),
+        null, null, null);
     addEnd(ee);
 
     bp.postProcess();

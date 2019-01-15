@@ -93,13 +93,13 @@ private:
     assert(output.length >= 6, "output[] error: " ~ output.join('\n') ~ " " ~ output.length.text);
 
     auto rtdStr = output[$ - 6];
-    writeln("Process ", aresPid, " finished: ", rtdStr);
     auto rtdPos = rtdStr.indexOf("RTD[");
     assert(rtdPos > 0, "Didn't find RuntimeDiff array in stdout of ThreadedTester");
     rtdStr = rtdStr[rtdPos + 4 .. $];
     rtdStr = rtdStr[0 .. rtdStr.indexOf("]")];
     string plotImprovData = titleStr.dup;
     auto vals = rtdStr.splitter(", ").map!(val => val.to!double).array.sort.array;
+    writeln("Process ", threadIdx, " finished: mean=", vals.mean);
     int i = 0;
     double[] leftVals = vals[0] ~ generate!(() => vals[i += 2]).take(vals.length / 2 - 2).array;
     i = 1;

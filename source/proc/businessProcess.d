@@ -6,7 +6,7 @@ public import proc.agent;
 public import proc.event;
 public import proc.gate;
 
-import std.algorithm : canFind, sort, uniq, remove, each, find, SwapStrategy;
+import std.algorithm : canFind, sort, uniq, remove, each, find, SwapStrategy, map, filter;
 import std.algorithm.setops : setIntersection;
 import std.stdio : writeln;
 import std.conv : text;
@@ -26,7 +26,7 @@ class BusinessProcess {
 
   ulong getStartId() const {
     // find START object
-    foreach (o; epcElements.byValue()) {
+    foreach (ref o; epcElements.byValue()) {
       // it's the Object that has no dependent objects
       if (o.deps.length == 0)
         return o.id;
@@ -169,9 +169,9 @@ class BusinessProcess {
   }
 
   void postProcess() {
-    scope (exit) {
-      saveToFile("graph_after_process.bin");
-    }
+    // scope (exit) {
+    //   saveToFile("graph_after_process.bin");
+    // }
 
     void updateSuccs() {
       // fill EE.succs
@@ -438,6 +438,18 @@ class BusinessProcess {
     removeDuplicateAndGates();
     identifyGateLoops();
     setGateProbs();
+  }
+
+  const(EE)[] succNodes(const EE node) const {
+    return node.succs
+      .map!(eeId => opCall(eeId))
+      .array;
+  }
+  const(EE)[] preNodes(const EE node) const {
+    return node.deps
+      .map!(eeId => opCall(eeId))
+      // .filter!(ee => ee.isFunc || ee.isGate || ee.isEvent)
+      .array;
   }
 
   ulong[] listAllFuncsBefore(const EE ee) const {

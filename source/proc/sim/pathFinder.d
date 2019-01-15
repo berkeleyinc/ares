@@ -14,6 +14,8 @@ class PathFinder {
     this.process_ = proc;
   }
 
+  void delegate(const EE node) onVisitNode = null;
+
   private struct Path {
     // ulong time = 0;
     ulong[] visitedIds;
@@ -62,6 +64,9 @@ private:
   void findPaths(ulong nodeId, ref Path path) {
     const EE ee = process_.epcElements[nodeId];
     assert(!ee.isAgent);
+
+    if (onVisitNode)
+      onVisitNode(ee);
 
     if (ee.isFunc) {
       // writeln(bo.name ~ ", waiting for " ~ text((cast(Function) bo).dur));

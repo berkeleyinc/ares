@@ -16,6 +16,8 @@ import proc.mod.businessProcessModifier;
 import proc.sim.simulation;
 import proc.sim.simulator;
 import proc.sim.multiple;
+import proc.sim.pathFinder;
+import proc.businessProcess;
 
 import util : gdup;
 import config;
@@ -94,9 +96,9 @@ class ThreadedTester {
   }
 
   static string popLogMessage(bool clear = false) {
+    if (_instance is null || _instance._queue.empty)
+      return "";
     with (_instance) {
-      if (_queue.empty)
-        return "";
       string str;
       synchronized (_queueMtx) {
         str = _queue.front();
@@ -110,6 +112,8 @@ class ThreadedTester {
   }
 
   static bool stopped() {
+    if (_instance is null)
+      return true;
     return !_instance._threads.any!(th => th.isRunning);
   }
 
@@ -155,6 +159,7 @@ private:
           double runtimeDiff = 0;
           if (!newProcs.empty) {
             auto newProc = newProcs[0];
+            validateBP(newProc);
 
             double timeTaken = MultiSimulator.allPathSimulate(proc);
             double timeTakenNew = MultiSimulator.allPathSimulate(newProc);
@@ -203,6 +208,89 @@ private:
       synchronized (_rtMtx) {
         _runtimes ~= runtimes;
         _runtimeDiffs ~= runtimeDiffs;
+      }
+    }
+  }
+
+  void validateBP(const BusinessProcess bp) {
+
+    class ConnExc : Exception {
+      enum Type {
+        functionHasAgents,
+        // funcHasNoPredecessor,
+        // funcHasNoSuccessor,
+        eachAgentConnectedToAtLeastOneFunc,
+        onlyOneEdgeOnEitherSide,
+        // gateHasNoSuccessor,
+        // gateHasNoPredecessor,
+        decisionGateMustHaveEventOrGateSuccs,
+        startOrEndMustBeEvent,
+        onlyOneEndEventSupported,
+        onlyOneStartEventSupported,
+        eventPredecessorsMustBeFuncOrGate,
+        eventSuccessorsMustBeFuncOrAndGate
+      };
+
+      this(Type type) {
+        super(type.text);
+        _type = type;
+        bp.saveToFile("bpValidationErr." ~ type.text);
+      }
+
+      Type _type;
+    }
+
+    bool foundStartEvent = false, foundEndEvent = false;
+    foreach (ref node; bp.epcElements.byValue()) {
+      const EE[] prevs = bp.preNodes(node);
+      const EE[] nexts = bp.succNodes(node);
+
+      if (node.isFunc) {
+        // if (prevs.filter!(ee => !ee.isAgent).array.length != 1)
+        //   throw new ConnExc(ConnExc.Type.funcHasNoPredecessor);
+        // if (nexts.length != 1)
+        //   throw new ConnExc(ConnExc.Type.funcHasNoSuccessor);
+        if (bp.agts.filter!(a => a.deps.any!(depId => depId == node.id)).empty)
+          throw new ConnExc(ConnExc.Type.functionHasAgents);
+      }
+      if (node.isAgent) {
+        if (!nexts.empty || prevs.empty || prevs.any!(ee => !ee.isFunc))
+          throw new ConnExc(ConnExc.Type.eachAgentConnectedToAtLeastOneFunc);
+      }
+      if (node.isGate) {
+        if (prevs.length > 1 && nexts.length > 1)
+          throw new ConnExc(ConnExc.Type.onlyOneEdgeOnEitherSide);
+        // if (prevs.empty)
+        //   throw new ConnExc(ConnExc.Type.gateHasNoPredecessor);
+        // if (nexts.empty)
+        //   throw new ConnExc(ConnExc.Type.gateHasNoSuccessor);
+
+        if (node.succs.length > 1 && (node.asGate.type == Gate.Type.or || node.asGate.type == Gate.Type.xor)) {
+          if (nexts.any!(succ => !succ.isEvent && !succ.isGate))
+            throw new ConnExc(ConnExc.Type.decisionGateMustHaveEventOrGateSuccs);
+        }
+      }
+
+      if (!node.isAgent && (prevs.empty || nexts.empty)) {
+        if (!node.isEvent)
+          throw new ConnExc(ConnExc.Type.startOrEndMustBeEvent);
+        if (nexts.empty) {
+          if (foundEndEvent)
+            throw new ConnExc(ConnExc.Type.onlyOneEndEventSupported);
+          foundEndEvent = true;
+        }
+        if (prevs.empty) {
+          if (foundStartEvent)
+            throw new ConnExc(ConnExc.Type.onlyOneStartEventSupported);
+          foundStartEvent = true;
+        }
+      }
+
+      if (node.isEvent) {
+        if (prevs.any!(ee => !ee.isFunc && !ee.isGate))
+          throw new ConnExc(ConnExc.Type.eventPredecessorsMustBeFuncOrGate);
+        if (nexts.any!(ee => !ee.isFunc && (!ee.isGate || ee.succs.length > 1 && ee.asGate.type != Gate.Type.and)))
+          throw new ConnExc(ConnExc.Type.eventSuccessorsMustBeFuncOrAndGate);
       }
     }
   }

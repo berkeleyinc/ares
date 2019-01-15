@@ -9,35 +9,38 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +213 proc/mod/businessProcessModifier.d
-badd +242 proc/sim/simulator.d
-badd +50 proc/mod/assignMod.d
-badd +39 proc/mod/moveMod.d
-badd +49 proc/sim/pathFinder.d
-badd +10 proc/businessProcess.d
-badd +346 web/service.d
-badd +283 ~/th/code/ares/public/js/site.js
-badd +1 proc/epcElement.d
+badd +59 proc/mod/businessProcessModifier.d
+badd +334 proc/sim/simulator.d
+badd +51 proc/mod/assignMod.d
+badd +125 proc/mod/moveMod.d
+badd +46 proc/sim/pathFinder.d
+badd +446 proc/businessProcess.d
+badd +20 web/service.d
+badd +372 ~/th/code/ares/public/js/site.js
+badd +19 proc/epcElement.d
 badd +52 graphviz/dotGenerator.d
 badd +1 proc/event.d
 badd +1 proc/func.d
 badd +44 proc/gate.d
-badd +52 proc/sim/multiple.d
+badd +31 proc/sim/multiple.d
 badd +12 proc/businessProcessExamples.d
-badd +32 config.d
-badd +47 proc/mod/parallelizeMod.d
-badd +141 proc/sim/token.d
+badd +128 config.d
+badd +152 proc/mod/parallelizeMod.d
+badd +88 proc/sim/token.d
 badd +1 proc/mod/modification.d
-badd +1 app.d
+badd +54 app.d
 badd +4 proc/agent.d
-badd +13 proc/sim/simulation.d
-badd +38 web/sessions.d
+badd +19 proc/sim/simulation.d
+badd +11 web/sessions.d
 badd +4 ~/th/code/ares/dub.json
-badd +1 test/businessProcessGenerator.d
+badd +45 test/businessProcessGenerator.d
 badd +26 ~/th/code/ares/views/index.dt
+badd +218 test/threadedTester.d
+badd +73 test/metaTester.d
+badd +9 util.d
 argglobal
 silent! argdel *
-edit test/businessProcessGenerator.d
+edit test/threadedTester.d
 set splitbelow splitright
 wincmd t
 set winminheight=0
@@ -54,12 +57,12 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 226 - ((40 * winheight(0) + 22) / 44)
+let s:l = 222 - ((39 * winheight(0) + 24) / 48)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-226
-normal! 09|
+222
+normal! 029|
 lcd ~/th/code/ares/source
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0

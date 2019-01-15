@@ -16,16 +16,6 @@ class EE {
     return ret ~ text(id);
   }
 
-  //   @property string label() const {
-  //     return label_;
-  //   }
-  // 
-  //   @property void label(string n) {
-  //     label_ = n;
-  //   }
-
-  ulong[] deps;
-  @nonPacked ulong[] succs;
-private:
-  //  string label_;
+  ulong[] deps; // predecessor node IDs
+  @nonPacked ulong[] succs; // successor node IDs (generated through BusinessProcess.postProcess)
 }
